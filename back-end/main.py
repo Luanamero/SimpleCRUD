@@ -1,35 +1,28 @@
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 class LivroCRUD:
     @staticmethod
     def create_connection():
         """Cria e retorna uma conexão com o banco de dados"""
         return psycopg2.connect(
-            host=os.getenv("DB_HOST"),
-            database=os.getenv("DB_NAME"),
-            user=os.getenv("DB_USER"),
-            password=os.getenv("DB_PASSWORD"),
-            cursor_factory=RealDictCursor
+           "postgresql://postgres:OPMuEZPtCOBSIxbSGdbYDYgjcGlwQebr@caboose.proxy.rlwy.net:56510/railway"
         )
 
     @staticmethod
-    def create_livro(titulo, estoque, ano_publicacao, preco, editora_id, autor_id):
-        """Cria um novo livro no banco de dados"""
+    def create_livro(titulo, estoque, ano_publicacao, preco, editora_id, autor_id, genero=None):
+        """Cria um novo livro no banco de dados, com gênero opcional"""
         conn = LivroCRUD.create_connection()
         cur = conn.cursor()
         try:
             cur.execute(
                 """
-                INSERT INTO livros (titulo, estoque, ano_publicacao, preco, editora_id, autor_id)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO livro (titulo, estoque, ano_publicacao, preco, editora_id, autor_id, genero)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 RETURNING *;
                 """,
-                (titulo, estoque, ano_publicacao, preco, editora_id, autor_id)
+                (titulo, estoque, ano_publicacao, preco, editora_id, autor_id, genero)
             )
             new_livro = cur.fetchone()
             conn.commit()
@@ -47,7 +40,7 @@ class LivroCRUD:
         conn = LivroCRUD.create_connection()
         cur = conn.cursor()
         try:
-            cur.execute("SELECT * FROM livros;")
+            cur.execute("SELECT * FROM livro;")
             return cur.fetchall()
         finally:
             cur.close()
@@ -59,7 +52,7 @@ class LivroCRUD:
         conn = LivroCRUD.create_connection()
         cur = conn.cursor()
         try:
-            cur.execute("SELECT * FROM livros WHERE id = %s;", (livro_id,))
+            cur.execute("SELECT * FROM livro WHERE id = %s;", (livro_id,))
             livro = cur.fetchone()
             if livro is None:
                 raise Exception("Livro não encontrado")
@@ -69,13 +62,13 @@ class LivroCRUD:
             conn.close()
 
     @staticmethod
-    def update_livro(livro_id, titulo=None, isbn=None, ano_publicacao=None, preco=None, editora_id=None, autor_id=None):
+    def update_livro(livro_id, titulo=None, ano_publicacao=None, preco=None, editora_id=None, autor_id=None, genero = None):
         """Atualiza um livro existente"""
         conn = LivroCRUD.create_connection()
         cur = conn.cursor()
         try:
             # Primeiro, obtemos os valores atuais
-            cur.execute("SELECT * FROM livros WHERE id = %s;", (livro_id,))
+            cur.execute("SELECT * FROM livro WHERE id = %s;", (livro_id,))
             livro = cur.fetchone()
             if livro is None:
                 raise Exception("Livro não encontrado")
@@ -87,9 +80,9 @@ class LivroCRUD:
             if titulo is not None:
                 update_fields.append("titulo = %s")
                 update_values.append(titulo)
-            if isbn is not None:
-                update_fields.append("isbn = %s")
-                update_values.append(isbn)
+            if genero is not None:
+                update_fields.append("genero = %s")
+                update_values.append(genero)
             if ano_publicacao is not None:
                 update_fields.append("ano_publicacao = %s")
                 update_values.append(ano_publicacao)
@@ -108,7 +101,7 @@ class LivroCRUD:
 
             update_values.append(livro_id)
             update_query = f"""
-                UPDATE livros
+                UPDATE livro
                 SET {', '.join(update_fields)}
                 WHERE id = %s
                 RETURNING *;
@@ -132,12 +125,12 @@ class LivroCRUD:
         cur = conn.cursor()
         try:
             # Verifica se o livro existe
-            cur.execute("SELECT * FROM livros WHERE id = %s;", (livro_id,))
+            cur.execute("SELECT * FROM livro WHERE id = %s;", (livro_id,))
             livro = cur.fetchone()
             if livro is None:
                 raise Exception("Livro não encontrado")
 
-            cur.execute("DELETE FROM livros WHERE id = %s RETURNING *;", (livro_id,))
+            cur.execute("DELETE FROM livro WHERE id = %s RETURNING *;", (livro_id,))
             deleted_livro = cur.fetchone()
             conn.commit()
             return deleted_livro
@@ -148,7 +141,6 @@ class LivroCRUD:
             cur.close()
             conn.close()
 
-    
     @staticmethod
     def create_editora(nome, endereco):
             """Cria uma nova editora no banco de dados"""
@@ -157,7 +149,7 @@ class LivroCRUD:
             try:
                 cur.execute(
                     """
-                    INSERT INTO editoras (nome, endereco)
+                    INSERT INTO editora (nome, endereco)
                     VALUES (%s, %s)
                     RETURNING *;
                     """,
@@ -179,7 +171,7 @@ class LivroCRUD:
             conn = LivroCRUD.create_connection()
             cur = conn.cursor()
             try:
-                cur.execute("SELECT * FROM editoras;")
+                cur.execute("SELECT * FROM editora;")
                 return cur.fetchall()
             finally:
                 cur.close()
@@ -223,22 +215,178 @@ class LivroCRUD:
             cur.close()
             conn.close()
 
+    @staticmethod
+    def update_editora(editora_id, novo_nome=None, novo_endereco=None):
+        """Atualiza os dados de um editora no banco de dados"""
+        conn = LivroCRUD.create_connection()
+        cur = conn.cursor()
+        try:
+            # Verifica se o editora existe
+            cur.execute("SELECT * FROM editora WHERE id = %s;", (editora_id,))
+            editora = cur.fetchone()
+            if editora is None:
+                raise Exception("editora não encontrado")
+
+            # Monta a query dinamicamente (para atualizar apenas os campos fornecidos)
+            query = "UPDATE editora SET "
+            params = []
+            
+            if novo_nome is not None:
+                query += "nome = %s, "
+                params.append(novo_nome)
+            
+            if novo_endereco is not None:
+                query += "biografia = %s, "
+                params.append(novo_endereco)
+            
+            # Remove a vírgula extra no final e adiciona a condição WHERE
+            query = query.rstrip(", ") + " WHERE id = %s RETURNING *;"
+            params.append(editora_id)
+
+            # Executa o UPDATE
+            cur.execute(query, tuple(params))
+            updated_editora = cur.fetchone()
+            conn.commit()
+            return updated_editora
+        except Exception as e:
+            conn.rollback()
+            raise Exception(f"Erro ao atualizar editora: {str(e)}")
+        finally:
+            cur.close()
+            conn.close()
 
 
+    @staticmethod
+    def create_autor(nome, nacionalidade):
+            """Cria uma nova autor no banco de dados"""
+            conn = LivroCRUD.create_connection()
+            cur = conn.cursor()
+            try:
+                cur.execute(
+                    """
+                    INSERT INTO autor (nome, nacionalidade)
+                    VALUES (%s, %s)
+                    RETURNING *;
+                    """,
+                    (nome, nacionalidade)
+                )
+                new_autor = cur.fetchone()
+                conn.commit()
+                return new_autor
+            except Exception as e:
+                conn.rollback()
+                raise Exception(f"Erro ao criar autor: {str(e)}")
+            finally:
+                cur.close()
+                conn.close()
+
+    @staticmethod
+    def get_all_autor():
+            """Retorna todos os autores do banco de dados"""
+            conn = LivroCRUD.create_connection()
+            cur = conn.cursor()
+            try:
+                cur.execute("SELECT * FROM autor;")
+                return cur.fetchall()
+            finally:
+                cur.close()
+                conn.close()
+
+    @staticmethod
+    def get_autor_by_id(autor_id):
+            """Retorna uma autor específica pelo ID"""
+            conn = LivroCRUD.create_connection()
+            cur = conn.cursor()
+            try:
+                cur.execute("SELECT * FROM autor WHERE id = %s;", (autor_id,))
+                autor = cur.fetchone()
+                if autor is None:
+                    raise Exception("autor não encontrado")
+                return autor
+            finally:
+                cur.close()
+                conn.close()
+
+    @staticmethod
+    def delete_autor(autor_id):
+        """Remove um livro do banco de dados"""
+        conn = LivroCRUD.create_connection()
+        cur = conn.cursor()
+        try:
+            # Verifica se o livro existe
+            cur.execute("SELECT * FROM autor WHERE id = %s;", (autor_id,))
+            autor = cur.fetchone()
+            if autor is None:
+                raise Exception("autor não encontrado")
+
+            cur.execute("DELETE FROM autor WHERE id = %s RETURNING *;", (autor_id,))
+            deleted_autor = cur.fetchone()
+            conn.commit()
+            return deleted_autor
+        except Exception as e:
+            conn.rollback()
+            raise Exception(f"Erro ao deletar autor: {str(e)}")
+        finally:
+            cur.close()
+            conn.close()
+
+    @staticmethod
+    def update_autor(autor_id, novo_nome=None, nova_biografia=None):
+        """Atualiza os dados de um autor no banco de dados"""
+        conn = LivroCRUD.create_connection()
+        cur = conn.cursor()
+        try:
+            # Verifica se o autor existe
+            cur.execute("SELECT * FROM autor WHERE id = %s;", (autor_id,))
+            autor = cur.fetchone()
+            if autor is None:
+                raise Exception("Autor não encontrado")
+
+            # Monta a query dinamicamente (para atualizar apenas os campos fornecidos)
+            query = "UPDATE autor SET "
+            params = []
+            
+            if novo_nome is not None:
+                query += "nome = %s, "
+                params.append(novo_nome)
+            
+            if nova_biografia is not None:
+                query += "biografia = %s, "
+                params.append(nova_biografia)
+            
+            # Remove a vírgula extra no final e adiciona a condição WHERE
+            query = query.rstrip(", ") + " WHERE id = %s RETURNING *;"
+            params.append(autor_id)
+
+            # Executa o UPDATE
+            cur.execute(query, tuple(params))
+            updated_autor = cur.fetchone()
+            conn.commit()
+            return updated_autor
+        except Exception as e:
+            conn.rollback()
+            raise Exception(f"Erro ao atualizar autor: {str(e)}")
+        finally:
+            cur.close()
+            conn.close()
+
+#Falta cliente, itemPedido e Pedido
+#Função que simula o pedido de um cliente
 
 # Exemplo de uso:
+print("teste")
 if __name__ == "__main__":
     try:
-        # Criar um novo livro
-        nova_editora = LivroCRUD.create_editora(
-            nome = "Penguin",
-            endereco= "Londres"
-        )
-        print("Editora criada:", nova_editora)
+        # Criar um novo editora
+        #nova_editora = LivroCRUD.create_editora(
+            #nome = "Penguin",
+            #endereco= "Londres"
+        #)
+        #print("Editora criada:", nova_editora)
 
         # Buscar todos os livros
-        #editoras = LivroCRUD.get_all_editoras()
-        #print("Todos as editoras:", editoras)
+        editoras = LivroCRUD.get_all_editoras()
+        print("Todos as editoras:", editoras)
 
         # Buscar um livro específico
         #editora = LivroCRUD.get_editora_by_id(nova_editora['id'])
