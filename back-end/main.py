@@ -10,6 +10,8 @@ class LivroCRUD:
            "postgresql://postgres:OPMuEZPtCOBSIxbSGdbYDYgjcGlwQebr@caboose.proxy.rlwy.net:56510/railway"
         )
 
+# ===== CRUD Livro =======
+
     @staticmethod
     def create_livro(titulo, estoque, ano_publicacao, preco, editora_id, autor_id, genero=None):
         """Cria um novo livro no banco de dados, com gênero opcional"""
@@ -141,6 +143,8 @@ class LivroCRUD:
             cur.close()
             conn.close()
 
+# ===== CRUD Editora =======
+
     @staticmethod
     def create_editora(nome, endereco):
             """Cria uma nova editora no banco de dados"""
@@ -255,7 +259,7 @@ class LivroCRUD:
             cur.close()
             conn.close()
 
-
+# ===== CRUD Autor =======
     @staticmethod
     def create_autor(nome, nacionalidade):
             """Cria uma nova autor no banco de dados"""
@@ -370,8 +374,362 @@ class LivroCRUD:
             cur.close()
             conn.close()
 
-#Falta cliente, itemPedido e Pedido
-#Função que simula o pedido de um cliente
+# ====== CRUD Cliente ======
+
+    @staticmethod
+    def create_cliente(nome, email, endereco, telefone = None):
+            """Cria uma nova cliente no banco de dados"""
+            conn = LivroCRUD.create_connection()
+            cur = conn.cursor()
+            try:
+                cur.execute(
+                    """
+                    INSERT INTO cliente (nome, email, endereco, telefone)
+                    VALUES (%s, %s, %s, %s)
+                    RETURNING *;
+                    """,
+                    (nome, email, endereco, telefone)
+                )
+                new_cliente = cur.fetchone()
+                conn.commit()
+                return new_cliente
+            except Exception as e:
+                conn.rollback()
+                raise Exception(f"Erro ao criar cliente: {str(e)}")
+            finally:
+                cur.close()
+                conn.close()
+
+    @staticmethod
+    def get_all_cliente():
+            """Retorna todos os clientes do banco de dados"""
+            conn = LivroCRUD.create_connection()
+            cur = conn.cursor()
+            try:
+                cur.execute("SELECT * FROM cliente;")
+                return cur.fetchall()
+            finally:
+                cur.close()
+                conn.close()
+    
+    @staticmethod
+    def get_cliente_by_id(cliente_id):
+            """Retorna uma cliente específica pelo ID"""
+            conn = LivroCRUD.create_connection()
+            cur = conn.cursor()
+            try:
+                cur.execute("SELECT * FROM cliente WHERE id = %s;", (cliente_id,))
+                cliente = cur.fetchone()
+                if cliente is None:
+                    raise Exception("cliente não encontrado")
+                return cliente
+            finally:
+                cur.close()
+                conn.close()
+
+    @staticmethod
+    def delete_cliente(cliente_id):
+        """Remove um livro do banco de dados"""
+        conn = LivroCRUD.create_connection()
+        cur = conn.cursor()
+        try:
+            # Verifica se o livro existe
+            cur.execute("SELECT * FROM cliente WHERE id = %s;", (cliente_id,))
+            cliente = cur.fetchone()
+            if cliente is None:
+                raise Exception("cliente não encontrado")
+
+            cur.execute("DELETE FROM cliente WHERE id = %s RETURNING *;", (cliente_id,))
+            deleted_cliente = cur.fetchone()
+            conn.commit()
+            return deleted_cliente
+        except Exception as e:
+            conn.rollback()
+            raise Exception(f"Erro ao deletar cliente: {str(e)}")
+        finally:
+            cur.close()
+            conn.close()
+
+    @staticmethod
+    def update_cliente(cliente_id, novo_nome=None, novo_endereco=None, novo_telefone=None, novo_email=None):
+        """Atualiza os dados de um cliente no banco de dados"""
+        conn = LivroCRUD.create_connection()
+        cur = conn.cursor()
+        try:
+            # Verifica se o cliente existe
+            cur.execute("SELECT * FROM cliente WHERE id = %s;", (cliente_id,))
+            cliente = cur.fetchone()
+            if cliente is None:
+                raise Exception("cliente não encontrado")
+
+            # Monta a query dinamicamente (para atualizar apenas os campos fornecidos)
+            query = "UPDATE cliente SET "
+            params = []
+            
+            if novo_nome is not None:
+                query += "nome = %s, "
+                params.append(novo_nome)
+            
+            if novo_endereco is not None:
+                query += "endereco = %s, "
+                params.append(novo_endereco)
+
+            if novo_telefone is not None:
+                query += "telefone = %s, "
+                params.append(novo_telefone)
+            
+            if novo_email is not None:
+                query += "email = %s, "
+                params.append(novo_email)
+
+            # Remove a vírgula extra no final e adiciona a condição WHERE
+            query = query.rstrip(", ") + " WHERE id = %s RETURNING *;"
+            params.append(cliente_id)
+
+            # Executa o UPDATE
+            cur.execute(query, tuple(params))
+            updated_cliente = cur.fetchone()
+            conn.commit()
+            return updated_cliente
+        except Exception as e:
+            conn.rollback()
+            raise Exception(f"Erro ao atualizar cliente: {str(e)}")
+        finally:
+            cur.close()
+            conn.close()
+
+# ===== CRUD itemPedido =======
+
+    @staticmethod
+    def create_itemPedido(livro_id, quantidade, preco_unitario):
+            """Cria uma nova itemPedido no banco de dados"""
+            conn = LivroCRUD.create_connection()
+            cur = conn.cursor()
+            try:
+                cur.execute(
+                    """
+                    INSERT INTO itemPedido (livro_id, quantidade, preco_unitario)
+                    VALUES (%s, %s, %s)
+                    RETURNING *;
+                    """,
+                    (livro_id, quantidade, preco_unitario)
+                )
+                new_itemPedido = cur.fetchone()
+                conn.commit()
+                return new_itemPedido
+            except Exception as e:
+                conn.rollback()
+                raise Exception(f"Erro ao criar itemPedido: {str(e)}")
+            finally:
+                cur.close()
+                conn.close()
+
+    @staticmethod
+    def get_all_itemPedido():
+            """Retorna todos os itemPedidos do banco de dados"""
+            conn = LivroCRUD.create_connection()
+            cur = conn.cursor()
+            try:
+                cur.execute("SELECT * FROM itemPedido;")
+                return cur.fetchall()
+            finally:
+                cur.close()
+                conn.close()
+
+    @staticmethod
+    def get_itemPedido_by_id(itemPedido_id):
+            """Retorna uma itemPedido específica pelo ID"""
+            conn = LivroCRUD.create_connection()
+            cur = conn.cursor()
+            try:
+                cur.execute("SELECT * FROM itemPedido WHERE id = %s;", (itemPedido_id,))
+                itemPedido = cur.fetchone()
+                if itemPedido is None:
+                    raise Exception("itemPedido não encontrado")
+                return itemPedido
+            finally:
+                cur.close()
+                conn.close()
+
+    @staticmethod
+    def delete_itemPedido(itemPedido_id):
+        """Remove um livro do banco de dados"""
+        conn = LivroCRUD.create_connection()
+        cur = conn.cursor()
+        try:
+            # Verifica se o livro existe
+            cur.execute("SELECT * FROM itemPedido WHERE id = %s;", (itemPedido_id,))
+            itemPedido = cur.fetchone()
+            if itemPedido is None:
+                raise Exception("itemPedido não encontrado")
+
+            cur.execute("DELETE FROM itemPedido WHERE id = %s RETURNING *;", (itemPedido_id,))
+            deleted_itemPedido = cur.fetchone()
+            conn.commit()
+            return deleted_itemPedido
+        except Exception as e:
+            conn.rollback()
+            raise Exception(f"Erro ao deletar itemPedido: {str(e)}")
+        finally:
+            cur.close()
+            conn.close()
+
+    @staticmethod
+    def update_itemPedido(itemPedido_id, nova_quantidade, novo_preco_unitario):
+        """Atualiza os dados de um itemPedido no banco de dados"""
+        conn = LivroCRUD.create_connection()
+        cur = conn.cursor()
+        try:
+            # Verifica se o itemPedido existe
+            cur.execute("SELECT * FROM itemPedido WHERE id = %s;", (itemPedido_id,))
+            itemPedido = cur.fetchone()
+            if itemPedido is None:
+                raise Exception("itemPedido não encontrado")
+
+            # Monta a query dinamicamente (para atualizar apenas os campos fornecidos)
+            query = "UPDATE itemPedido SET "
+            params = []
+            
+            if nova_quantidade is not None:
+                query += "quantidade = %s, "
+                params.append(nova_quantidade)
+            
+            if novo_preco_unitario is not None:
+                query += "preco_unitario = %s, "
+                params.append(novo_preco_unitario)
+
+            # Remove a vírgula extra no final e adiciona a condição WHERE
+            query = query.rstrip(", ") + " WHERE id = %s RETURNING *;"
+            params.append(itemPedido_id)
+
+            # Executa o UPDATE
+            cur.execute(query, tuple(params))
+            updated_itemPedido = cur.fetchone()
+            conn.commit()
+            return updated_itemPedido
+        except Exception as e:
+            conn.rollback()
+            raise Exception(f"Erro ao atualizar itemPedido: {str(e)}")
+        finally:
+            cur.close()
+            conn.close()
+
+# ===== CRUD Pedido =======
+    @staticmethod
+    def create_pedido(cliente_id, data, total):
+            """Cria uma nova pedido no banco de dados"""
+            conn = LivroCRUD.create_connection()
+            cur = conn.cursor()
+            try:
+                cur.execute(
+                    """
+                    INSERT INTO pedido (cliente_id, data, total)
+                    VALUES (%s, %s, %s)
+                    RETURNING *;
+                    """,
+                    (cliente_id, data, total)
+                )
+                new_pedido = cur.fetchone()
+                conn.commit()
+                return new_pedido
+            except Exception as e:
+                conn.rollback()
+                raise Exception(f"Erro ao criar pedido: {str(e)}")
+            finally:
+                cur.close()
+                conn.close()
+
+    @staticmethod
+    def get_all_pedido():
+            """Retorna todos os pedidos do banco de dados"""
+            conn = LivroCRUD.create_connection()
+            cur = conn.cursor()
+            try:
+                cur.execute("SELECT * FROM pedido;")
+                return cur.fetchall()
+            finally:
+                cur.close()
+                conn.close()
+
+    @staticmethod
+    def get_pedido_by_id(pedido_id):
+            """Retorna uma pedido específica pelo ID"""
+            conn = LivroCRUD.create_connection()
+            cur = conn.cursor()
+            try:
+                cur.execute("SELECT * FROM pedido WHERE id = %s;", (pedido_id,))
+                pedido = cur.fetchone()
+                if pedido is None:
+                    raise Exception("pedido não encontrado")
+                return pedido
+            finally:
+                cur.close()
+                conn.close()
+
+    @staticmethod
+    def delete_pedido(pedido_id):
+        """Remove um livro do banco de dados"""
+        conn = LivroCRUD.create_connection()
+        cur = conn.cursor()
+        try:
+            # Verifica se o livro existe
+            cur.execute("SELECT * FROM pedido WHERE id = %s;", (pedido_id,))
+            pedido = cur.fetchone()
+            if pedido is None:
+                raise Exception("pedido não encontrado")
+
+            cur.execute("DELETE FROM pedido WHERE id = %s RETURNING *;", (pedido_id,))
+            deleted_pedido = cur.fetchone()
+            conn.commit()
+            return deleted_pedido
+        except Exception as e:
+            conn.rollback()
+            raise Exception(f"Erro ao deletar pedido: {str(e)}")
+        finally:
+            cur.close()
+            conn.close()
+
+    @staticmethod
+    def update_pedido(pedido_id, nova_data, novo_total):
+        """Atualiza os dados de um pedido no banco de dados"""
+        conn = LivroCRUD.create_connection()
+        cur = conn.cursor()
+        try:
+            # Verifica se o pedido existe
+            cur.execute("SELECT * FROM pedido WHERE id = %s;", (pedido_id,))
+            pedido = cur.fetchone()
+            if pedido is None:
+                raise Exception("pedido não encontrado")
+
+            # Monta a query dinamicamente (para atualizar apenas os campos fornecidos)
+            query = "UPDATE pedido SET "
+            params = []
+            
+            if nova_data is not None:
+                query += "data = %s, "
+                params.append(nova_data)
+            
+            if novo_total is not None:
+                query += "preco_unitario = %s, "
+                params.append(novo_total)
+
+            # Remove a vírgula extra no final e adiciona a condição WHERE
+            query = query.rstrip(", ") + " WHERE id = %s RETURNING *;"
+            params.append(pedido_id)
+
+            # Executa o UPDATE
+            cur.execute(query, tuple(params))
+            updated_pedido = cur.fetchone()
+            conn.commit()
+            return updated_pedido
+        except Exception as e:
+            conn.rollback()
+            raise Exception(f"Erro ao atualizar pedido: {str(e)}")
+        finally:
+            cur.close()
+            conn.close()
+
+
 
 # Exemplo de uso:
 print("teste")
