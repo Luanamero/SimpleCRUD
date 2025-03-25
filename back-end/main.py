@@ -1,319 +1,259 @@
-from fastapi import FastAPI, HTTPException, Depends
-from pydantic import BaseModel
-from typing import List, Annotated
-from sqlalchemy.orm import Session
-from database import SessionLocal
-from models import Autor, Cliente, Editora, ItemPedido, Livro, Pedido
-from schemas import AutorCreate, AutorResponse, ClienteCreate, ClienteResponse, EditoraCreate, EditoraResponse, ItemPedidoCreate, ItemPedidoResponse, LivroCreate, LivroResponse, PedidoCreate, PedidoResponse
-from fastapi.middleware.cors import CORSMiddleware
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import os
+from dotenv import load_dotenv
 
-app = FastAPI()
+load_dotenv()
 
-# Configurar CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3001"],  # Ou ["*"] para permitir qualquer origem (não recomendado em produção)
-    allow_credentials=True,
-    allow_methods=["*"],  # Permite todos os métodos (GET, POST, PUT, DELETE, etc.)
-    allow_headers=["*"],  # Permite todos os cabeçalhos
-)
+class LivroCRUD:
+    @staticmethod
+    def create_connection():
+        """Cria e retorna uma conexão com o banco de dados"""
+        return psycopg2.connect(
+            host=os.getenv("DB_HOST"),
+            database=os.getenv("DB_NAME"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            cursor_factory=RealDictCursor
+        )
 
-# Dependency to get the database session
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    @staticmethod
+    def create_livro(titulo, estoque, ano_publicacao, preco, editora_id, autor_id):
+        """Cria um novo livro no banco de dados"""
+        conn = LivroCRUD.create_connection()
+        cur = conn.cursor()
+        try:
+            cur.execute(
+                """
+                INSERT INTO livros (titulo, estoque, ano_publicacao, preco, editora_id, autor_id)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING *;
+                """,
+                (titulo, estoque, ano_publicacao, preco, editora_id, autor_id)
+            )
+            new_livro = cur.fetchone()
+            conn.commit()
+            return new_livro
+        except Exception as e:
+            conn.rollback()
+            raise Exception(f"Erro ao criar livro: {str(e)}")
+        finally:
+            cur.close()
+            conn.close()
 
-# Create a new Livro
-@app.post("/livros/", response_model=LivroResponse, tags=["Livros"])
-def create_livro(livro: LivroCreate, db: Session = Depends(get_db)):
-    db_livro = Livro(**livro.dict())
-    db.add(db_livro)
-    db.commit()
-    db.refresh(db_livro)
-    return db_livro
+    @staticmethod
+    def get_all_livros():
+        """Retorna todos os livros do banco de dados"""
+        conn = LivroCRUD.create_connection()
+        cur = conn.cursor()
+        try:
+            cur.execute("SELECT * FROM livros;")
+            return cur.fetchall()
+        finally:
+            cur.close()
+            conn.close()
 
-# Get all Livros
-@app.get("/livros/", response_model=List[LivroResponse], tags=["Livros"])
-def read_livros(db: Session = Depends(get_db)):
-    livros = db.query(Livro).all()
-    return livros
+    @staticmethod
+    def get_livro_by_id(livro_id):
+        """Retorna um livro específico pelo ID"""
+        conn = LivroCRUD.create_connection()
+        cur = conn.cursor()
+        try:
+            cur.execute("SELECT * FROM livros WHERE id = %s;", (livro_id,))
+            livro = cur.fetchone()
+            if livro is None:
+                raise Exception("Livro não encontrado")
+            return livro
+        finally:
+            cur.close()
+            conn.close()
 
-# Get a single Livro by ID
-@app.get("/livros/{livro_id}", response_model=LivroResponse, tags=["Livros"])
-def read_livro(livro_id: int, db: Session = Depends(get_db)):
-    livro = db.query(Livro).filter(Livro.id == livro_id).first()
-    if livro is None:
-        raise HTTPException(status_code=404, detail="Livro not found")
-    return livro
+    @staticmethod
+    def update_livro(livro_id, titulo=None, isbn=None, ano_publicacao=None, preco=None, editora_id=None, autor_id=None):
+        """Atualiza um livro existente"""
+        conn = LivroCRUD.create_connection()
+        cur = conn.cursor()
+        try:
+            # Primeiro, obtemos os valores atuais
+            cur.execute("SELECT * FROM livros WHERE id = %s;", (livro_id,))
+            livro = cur.fetchone()
+            if livro is None:
+                raise Exception("Livro não encontrado")
 
-# Update a Livro
-@app.put("/livros/{livro_id}", response_model=LivroResponse, tags=["Livros"])
-def update_livro(livro_id: int, livro: LivroCreate, db: Session = Depends(get_db)):
-    db_livro = db.query(Livro).filter(Livro.id == livro_id).first()
-    if db_livro is None:
-        raise HTTPException(status_code=404, detail="Livro not found")
-    for key, value in livro.dict().items():
-        setattr(db_livro, key, value)
-    db.commit()
-    db.refresh(db_livro)
-    return db_livro
+            # Atualiza apenas os campos fornecidos
+            update_fields = []
+            update_values = []
+            
+            if titulo is not None:
+                update_fields.append("titulo = %s")
+                update_values.append(titulo)
+            if isbn is not None:
+                update_fields.append("isbn = %s")
+                update_values.append(isbn)
+            if ano_publicacao is not None:
+                update_fields.append("ano_publicacao = %s")
+                update_values.append(ano_publicacao)
+            if preco is not None:
+                update_fields.append("preco = %s")
+                update_values.append(preco)
+            if editora_id is not None:
+                update_fields.append("editora_id = %s")
+                update_values.append(editora_id)
+            if autor_id is not None:
+                update_fields.append("autor_id = %s")
+                update_values.append(autor_id)
 
-from sqlalchemy.exc import SQLAlchemyError
+            if not update_fields:
+                raise Exception("Nenhum campo para atualizar")
 
-@app.delete("/livros/{livro_id}", response_model=LivroResponse, tags=["Livros"])
-def delete_livro(livro_id: int, db: Session = Depends(get_db)):
-    db_livro = db.query(Livro).filter(Livro.id == livro_id).first()
-    if db_livro is None:
-        raise HTTPException(status_code=404, detail="Livro not found")
+            update_values.append(livro_id)
+            update_query = f"""
+                UPDATE livros
+                SET {', '.join(update_fields)}
+                WHERE id = %s
+                RETURNING *;
+            """
+
+            cur.execute(update_query, update_values)
+            updated_livro = cur.fetchone()
+            conn.commit()
+            return updated_livro
+        except Exception as e:
+            conn.rollback()
+            raise Exception(f"Erro ao atualizar livro: {str(e)}")
+        finally:
+            cur.close()
+            conn.close()
+
+    @staticmethod
+    def delete_livro(livro_id):
+        """Remove um livro do banco de dados"""
+        conn = LivroCRUD.create_connection()
+        cur = conn.cursor()
+        try:
+            # Verifica se o livro existe
+            cur.execute("SELECT * FROM livros WHERE id = %s;", (livro_id,))
+            livro = cur.fetchone()
+            if livro is None:
+                raise Exception("Livro não encontrado")
+
+            cur.execute("DELETE FROM livros WHERE id = %s RETURNING *;", (livro_id,))
+            deleted_livro = cur.fetchone()
+            conn.commit()
+            return deleted_livro
+        except Exception as e:
+            conn.rollback()
+            raise Exception(f"Erro ao deletar livro: {str(e)}")
+        finally:
+            cur.close()
+            conn.close()
+
     
+    @staticmethod
+    def create_editora(nome, endereco):
+            """Cria uma nova editora no banco de dados"""
+            conn = LivroCRUD.create_connection()
+            cur = conn.cursor()
+            try:
+                cur.execute(
+                    """
+                    INSERT INTO editoras (nome, endereco)
+                    VALUES (%s, %s)
+                    RETURNING *;
+                    """,
+                    (nome, endereco)
+                )
+                new_editora = cur.fetchone()
+                conn.commit()
+                return new_editora
+            except Exception as e:
+                conn.rollback()
+                raise Exception(f"Erro ao criar editora: {str(e)}")
+            finally:
+                cur.close()
+                conn.close()
+
+    @staticmethod
+    def get_all_editoras():
+            """Retorna todos os livros do banco de dados"""
+            conn = LivroCRUD.create_connection()
+            cur = conn.cursor()
+            try:
+                cur.execute("SELECT * FROM editoras;")
+                return cur.fetchall()
+            finally:
+                cur.close()
+                conn.close()
+
+    @staticmethod
+    def get_editora_by_id(editora_id):
+            """Retorna uma editora específica pelo ID"""
+            conn = LivroCRUD.create_connection()
+            cur = conn.cursor()
+            try:
+                cur.execute("SELECT * FROM editoras WHERE id = %s;", (editora_id,))
+                editora = cur.fetchone()
+                if editora is None:
+                    raise Exception("Editora não encontrado")
+                return editora
+            finally:
+                cur.close()
+                conn.close()
+
+    @staticmethod
+    def delete_editora(editora_id):
+        """Remove um livro do banco de dados"""
+        conn = LivroCRUD.create_connection()
+        cur = conn.cursor()
+        try:
+            # Verifica se o livro existe
+            cur.execute("SELECT * FROM editoras WHERE id = %s;", (editora_id,))
+            editora = cur.fetchone()
+            if editora is None:
+                raise Exception("Editora não encontrado")
+
+            cur.execute("DELETE FROM editoras WHERE id = %s RETURNING *;", (editora_id,))
+            deleted_editora = cur.fetchone()
+            conn.commit()
+            return deleted_editora
+        except Exception as e:
+            conn.rollback()
+            raise Exception(f"Erro ao deletar editoras: {str(e)}")
+        finally:
+            cur.close()
+            conn.close()
+
+
+
+
+# Exemplo de uso:
+if __name__ == "__main__":
     try:
-        db.delete(db_livro)
-        db.commit()
-        return db_livro
-    except SQLAlchemyError as e:
-        db.rollback()  # Reverte alterações em caso de erro
-        raise HTTPException(status_code=500, detail=f"Erro no banco de dados: {str(e)}")
-    
-# Endpoint para criar uma editora
-@app.post("/editoras/", response_model=EditoraResponse, tags=["Editoras"])
-def create_editora(editora: EditoraCreate, db: Session = Depends(get_db)):
-    db_editora = Editora(**editora.dict())  # Converte o schema Pydantic em um objeto SQLAlchemy
-    db.add(db_editora)  # Adiciona a editora ao banco de dados
-    db.commit()  # Confirma a transação
-    db.refresh(db_editora)  # Atualiza o objeto com os dados do banco de dados
-    return db_editora  # Retorna a editora criada
+        # Criar um novo livro
+        nova_editora = LivroCRUD.create_editora(
+            nome = "Penguin",
+            endereco= "Londres"
+        )
+        print("Editora criada:", nova_editora)
 
-# Endpoint para listar todas as editoras
-@app.get("/editoras/", response_model=List[EditoraResponse], tags=["Editoras"])
-def read_editoras(db: Session = Depends(get_db)):
-    editoras = db.query(Editora).all()  # Busca todas as editoras no banco de dados
-    return editoras  # Retorna a lista de editoras
+        # Buscar todos os livros
+        #editoras = LivroCRUD.get_all_editoras()
+        #print("Todos as editoras:", editoras)
 
-# Endpoint para buscar uma editora por ID
-@app.get("/editoras/{editora_id}", response_model=EditoraResponse, tags=["Editoras"])
-def read_editora(editora_id: int, db: Session = Depends(get_db)):
-    editora = db.query(Editora).filter(Editora.id == editora_id).first()  # Busca a editora pelo ID
-    if editora is None:
-        raise HTTPException(status_code=404, detail="Editora não encontrada")  # Retorna erro 404 se a editora não existir
-    return editora  # Retorna a editora encontrada
+        # Buscar um livro específico
+        #editora = LivroCRUD.get_editora_by_id(nova_editora['id'])
+        #print("Editora encontrado:", editora)
 
-# Endpoint para atualizar uma editora
-@app.put("/editoras/{editora_id}", response_model=EditoraResponse, tags=["Editoras"])
-def update_editora(editora_id: int, editora: EditoraCreate, db: Session = Depends(get_db)):
-    db_editora = db.query(Editora).filter(Editora.id == editora_id).first()  # Busca a editora pelo ID
-    if db_editora is None:
-        raise HTTPException(status_code=404, detail="Editora não encontrada")  # Retorna erro 404 se a editora não existir
-    for key, value in editora.dict().items():
-        setattr(db_editora, key, value)  # Atualiza os campos da editora
-    db.commit()  # Confirma a transação
-    db.refresh(db_editora)  # Atualiza o objeto com os dados do banco de dados
-    return db_editora  # Retorna a editora atualizada
+        # Atualizar um livro
+        #editora_atualizado = LivroCRUD.update_editora(
+            #editora_id= nova_editora['id'],
+            #endereco = "Londres, Inglaterra"
+       # )
+        #print("Livro atualizado:", editora_atualizado)
 
-# Endpoint para excluir uma editora
-@app.delete("/editoras/{editora_id}", response_model=EditoraResponse, tags=["Editoras"])
-def delete_editora(editora_id: int, db: Session = Depends(get_db)):
-    db_editora = db.query(Editora).filter(Editora.id == editora_id).first()  # Busca a editora pelo ID
-    if db_editora is None:
-        raise HTTPException(status_code=404, detail="Editora não encontrada")  # Retorna erro 404 se a editora não existir
-    db.delete(db_editora)  # Exclui a editora
-    db.commit()  # Confirma a transação
-    return db_editora  # Retorna a editora excluída
-
-# Endpoint para criar um autor
-@app.post("/autores/", response_model=AutorResponse, tags=["Autores"])
-def create_autor(autor: AutorCreate, db: Session = Depends(get_db)):
-    db_autor = Autor(**autor.dict())  # Converte o schema Pydantic em um objeto SQLAlchemy
-    db.add(db_autor)  # Adiciona o autor ao banco de dados
-    db.commit()  # Confirma a transação
-    db.refresh(db_autor)  # Atualiza o objeto com os dados do banco de dados
-    return db_autor  # Retorna o autor criado
-
-# Endpoint para listar todos os autores
-@app.get("/autores/", response_model=List[AutorResponse], tags=["Autores"])
-def read_autores(db: Session = Depends(get_db)):
-    autores = db.query(Autor).all()  # Busca todos os autores no banco de dados
-    return autores  # Retorna a lista de autores
-
-# Endpoint para buscar um autor por ID
-@app.get("/autores/{autor_id}", response_model=AutorResponse, tags=["Autores"])
-def read_autor(autor_id: int, db: Session = Depends(get_db)):
-    autor = db.query(Autor).filter(Autor.id == autor_id).first()  # Busca o autor pelo ID
-    if autor is None:
-        raise HTTPException(status_code=404, detail="Autor não encontrado")  # Retorna erro 404 se o autor não existir
-    return autor  # Retorna o autor encontrado
-
-# Endpoint para atualizar um autor
-@app.put("/autores/{autor_id}", response_model=AutorResponse, tags=["Autores"])
-def update_autor(autor_id: int, autor: AutorCreate, db: Session = Depends(get_db)):
-    db_autor = db.query(Autor).filter(Autor.id == autor_id).first()  # Busca o autor pelo ID
-    if db_autor is None:
-        raise HTTPException(status_code=404, detail="Autor não encontrado")  # Retorna erro 404 se o autor não existir
-    for key, value in autor.dict().items():
-        setattr(db_autor, key, value)  # Atualiza os campos do autor
-    db.commit()  # Confirma a transação
-    db.refresh(db_autor)  # Atualiza o objeto com os dados do banco de dados
-    return db_autor  # Retorna o autor atualizado
-
-# Endpoint para excluir um autor
-@app.delete("/autores/{autor_id}", response_model=AutorResponse, tags=["Autores"])
-def delete_autor(autor_id: int, db: Session = Depends(get_db)):
-    db_autor = db.query(Autor).filter(Autor.id == autor_id).first()  # Busca o autor pelo ID
-    if db_autor is None:
-        raise HTTPException(status_code=404, detail="Autor não encontrado")  # Retorna erro 404 se o autor não existir
-    db.delete(db_autor)  # Exclui o autor
-    db.commit()  # Confirma a transação
-    return db_autor  # Retorna o autor excluído
-
-
-# Endpoint para criar um item de pedido
-@app.post("/itens_pedido/", response_model=ItemPedidoResponse, tags=["Itens de Pedido"])
-def create_item_pedido(item_pedido: ItemPedidoCreate, db: Session = Depends(get_db)):
-    db_item_pedido = ItemPedido(**item_pedido.dict())
-    db.add(db_item_pedido)
-    db.commit()
-    db.refresh(db_item_pedido)
-    return db_item_pedido
-
-# Endpoint para listar todos os itens de pedido
-@app.get("/itens_pedido/", response_model=List[ItemPedidoResponse], tags=["Itens de Pedido"])
-def read_itens_pedido(db: Session = Depends(get_db)):
-    itens_pedido = db.query(ItemPedido).all()
-    return itens_pedido
-
-# Endpoint para buscar um item de pedido por ID
-@app.get("/itens_pedido/{item_pedido_id}", response_model=ItemPedidoResponse, tags=["Itens de Pedido"])
-def read_item_pedido(item_pedido_id: int, db: Session = Depends(get_db)):
-    item_pedido = db.query(ItemPedido).filter(ItemPedido.id == item_pedido_id).first()
-    if item_pedido is None:
-        raise HTTPException(status_code=404, detail="Item de pedido não encontrado")
-    return item_pedido
-
-# Endpoint para atualizar um item de pedido
-@app.put("/itens_pedido/{item_pedido_id}", response_model=ItemPedidoResponse, tags=["Itens de Pedido"])
-def update_item_pedido(item_pedido_id: int, item_pedido: ItemPedidoCreate, db: Session = Depends(get_db)):
-    db_item_pedido = db.query(ItemPedido).filter(ItemPedido.id == item_pedido_id).first()
-    if db_item_pedido is None:
-        raise HTTPException(status_code=404, detail="Item de pedido não encontrado")
-    for key, value in item_pedido.dict().items():
-        setattr(db_item_pedido, key, value)
-    db.commit()
-    db.refresh(db_item_pedido)
-    return db_item_pedido
-
-# Endpoint para excluir um item de pedido
-@app.delete("/itens_pedido/{item_pedido_id}", response_model=ItemPedidoResponse, tags=["Itens de Pedido"])
-def delete_item_pedido(item_pedido_id: int, db: Session = Depends(get_db)):
-    db_item_pedido = db.query(ItemPedido).filter(ItemPedido.id == item_pedido_id).first()
-    if db_item_pedido is None:
-        raise HTTPException(status_code=404, detail="Item de pedido não encontrado")
-    db.delete(db_item_pedido)
-    db.commit()
-    return db_item_pedido
-
-# Endpoint para criar um pedido
-@app.post("/pedidos/", response_model=PedidoResponse, tags=["Pedidos"])
-def create_pedido(pedido: PedidoCreate, db: Session = Depends(get_db)):
-    db_pedido = Pedido(**pedido.dict())
-    db.add(db_pedido)
-    db.commit()
-    db.refresh(db_pedido)
-    return db_pedido
-
-# Endpoint para listar todos os pedidos
-@app.get("/pedidos/", response_model=List[PedidoResponse], tags=["Pedidos"])
-def read_pedidos(db: Session = Depends(get_db)):
-    pedidos = db.query(Pedido).all()
-    return pedidos
-
-# Endpoint para buscar um pedido por ID
-@app.get("/pedidos/{pedido_id}", response_model=PedidoResponse, tags=["Pedidos"])
-def read_pedido(pedido_id: int, db: Session = Depends(get_db)):
-    pedido = db.query(Pedido).filter(Pedido.id == pedido_id).first()
-    if pedido is None:
-        raise HTTPException(status_code=404, detail="Pedido não encontrado")
-    return pedido
-
-# Endpoint para atualizar um pedido
-@app.put("/pedidos/{pedido_id}", response_model=PedidoResponse, tags=["Pedidos"])
-def update_pedido(pedido_id: int, pedido: PedidoCreate, db: Session = Depends(get_db)):
-    db_pedido = db.query(Pedido).filter(Pedido.id == pedido_id).first()
-    if db_pedido is None:
-        raise HTTPException(status_code=404, detail="Pedido não encontrado")
-    for key, value in pedido.dict().items():
-        setattr(db_pedido, key, value)
-    db.commit()
-    db.refresh(db_pedido)
-    return db_pedido
-
-# Endpoint para excluir um pedido
-@app.delete("/pedidos/{pedido_id}", response_model=PedidoResponse, tags=["Pedidos"])
-def delete_pedido(pedido_id: int, db: Session = Depends(get_db)):
-    db_pedido = db.query(Pedido).filter(Pedido.id == pedido_id).first()
-    if db_pedido is None:
-        raise HTTPException(status_code=404, detail="Pedido não encontrado")
-    db.delete(db_pedido)
-    db.commit()
-    return db_pedido
-
-# Endpoint para criar um cliente
-@app.post("/clientes/", response_model=ClienteResponse, tags=["Clientes"])
-def create_cliente(cliente: ClienteCreate, db: Session = Depends(get_db)):
-    # Verificar se os dados do cliente são válidos (você pode adicionar validação aqui, se necessário)
-    try:
-        # Criar o cliente a partir do modelo
-        db_cliente = Cliente(**cliente.dict())
-
-        # Tentar adicionar o cliente à sessão do banco de dados
-        db.add(db_cliente)
-        db.commit()  # Tenta realizar o commit da transação
-        db.refresh(db_cliente)  # Atualiza o objeto com os dados do banco
-
-        return db_cliente  # Retorna o cliente criado
-
-    except SQLAlchemyError as e:
-        # Se ocorrer um erro relacionado ao banco de dados, reverte as alterações
-        db.rollback()  # Rollback da transação em caso de erro
-        raise HTTPException(status_code=500, detail=f"Erro no banco de dados: {str(e)}")
+        # Deletar um livro
+        #editora_deletado = LivroCRUD.delete_editora(nova_editora['id'])
+        #print("Livro deletado:", editora_deletado)
 
     except Exception as e:
-        # Para outros erros que não sejam relacionados ao banco de dados
-        raise HTTPException(status_code=500, detail=f"Erro inesperado: {str(e)}")
-
-# Endpoint para listar todos os clientes
-@app.get("/clientes/", response_model=List[ClienteResponse], tags=["Clientes"])
-def read_clientes(db: Session = Depends(get_db)):
-    clientes = db.query(Cliente).all()
-    return clientes
-
-# Endpoint para buscar um cliente por ID
-@app.get("/clientes/{cliente_id}", response_model=ClienteResponse, tags=["Clientes"])
-def read_cliente(cliente_id: int, db: Session = Depends(get_db)):
-    cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
-    if cliente is None:
-        raise HTTPException(status_code=404, detail="Cliente não encontrado")
-    return cliente
-
-# Endpoint para atualizar um cliente
-@app.put("/clientes/{cliente_id}", response_model=ClienteResponse, tags=["Clientes"])
-def update_cliente(cliente_id: int, cliente: ClienteCreate, db: Session = Depends(get_db)):
-    db_cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
-    if db_cliente is None:
-        raise HTTPException(status_code=404, detail="Cliente não encontrado")
-    for key, value in cliente.dict().items():
-        setattr(db_cliente, key, value)
-    db.commit()
-    db.refresh(db_cliente)
-    return db_cliente
-
-# Endpoint para excluir um cliente
-@app.delete("/clientes/{cliente_id}", response_model=ClienteResponse, tags=["Clientes"])
-def delete_cliente(cliente_id: int, db: Session = Depends(get_db)):
-    db_cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
-    if db_cliente is None:
-        raise HTTPException(status_code=404, detail="Cliente não encontrado")
-    db.delete(db_cliente)
-    db.commit()
-    return db_cliente
+        print("Ocorreu um erro:", str(e))
