@@ -3,10 +3,20 @@ from pydantic import BaseModel
 from typing import List, Annotated
 from sqlalchemy.orm import Session
 from database import SessionLocal
-from models import Autor, Editora, Livro
-from schemas import AutorCreate, AutorResponse, EditoraCreate, EditoraResponse, LivroCreate, LivroResponse
+from models import Autor, Cliente, Editora, ItemPedido, Livro, Pedido
+from schemas import AutorCreate, AutorResponse, ClienteCreate, ClienteResponse, EditoraCreate, EditoraResponse, ItemPedidoCreate, ItemPedidoResponse, LivroCreate, LivroResponse, PedidoCreate, PedidoResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+# Configurar CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3001"],  # Ou ["*"] para permitir qualquer origem (não recomendado em produção)
+    allow_credentials=True,
+    allow_methods=["*"],  # Permite todos os métodos (GET, POST, PUT, DELETE, etc.)
+    allow_headers=["*"],  # Permite todos os cabeçalhos
+)
 
 # Dependency to get the database session
 def get_db():
@@ -51,16 +61,22 @@ def update_livro(livro_id: int, livro: LivroCreate, db: Session = Depends(get_db
     db.refresh(db_livro)
     return db_livro
 
-# Delete a Livro
+from sqlalchemy.exc import SQLAlchemyError
+
 @app.delete("/livros/{livro_id}", response_model=LivroResponse, tags=["Livros"])
 def delete_livro(livro_id: int, db: Session = Depends(get_db)):
     db_livro = db.query(Livro).filter(Livro.id == livro_id).first()
     if db_livro is None:
         raise HTTPException(status_code=404, detail="Livro not found")
-    db.delete(db_livro)
-    db.commit()
-    return db_livro
-
+    
+    try:
+        db.delete(db_livro)
+        db.commit()
+        return db_livro
+    except SQLAlchemyError as e:
+        db.rollback()  # Reverte alterações em caso de erro
+        raise HTTPException(status_code=500, detail=f"Erro no banco de dados: {str(e)}")
+    
 # Endpoint para criar uma editora
 @app.post("/editoras/", response_model=EditoraResponse, tags=["Editoras"])
 def create_editora(editora: EditoraCreate, db: Session = Depends(get_db)):
@@ -152,3 +168,137 @@ def delete_autor(autor_id: int, db: Session = Depends(get_db)):
     return db_autor  # Retorna o autor excluído
 
 
+# Endpoint para criar um item de pedido
+@app.post("/itens_pedido/", response_model=ItemPedidoResponse, tags=["Itens de Pedido"])
+def create_item_pedido(item_pedido: ItemPedidoCreate, db: Session = Depends(get_db)):
+    db_item_pedido = ItemPedido(**item_pedido.dict())
+    db.add(db_item_pedido)
+    db.commit()
+    db.refresh(db_item_pedido)
+    return db_item_pedido
+
+# Endpoint para listar todos os itens de pedido
+@app.get("/itens_pedido/", response_model=List[ItemPedidoResponse], tags=["Itens de Pedido"])
+def read_itens_pedido(db: Session = Depends(get_db)):
+    itens_pedido = db.query(ItemPedido).all()
+    return itens_pedido
+
+# Endpoint para buscar um item de pedido por ID
+@app.get("/itens_pedido/{item_pedido_id}", response_model=ItemPedidoResponse, tags=["Itens de Pedido"])
+def read_item_pedido(item_pedido_id: int, db: Session = Depends(get_db)):
+    item_pedido = db.query(ItemPedido).filter(ItemPedido.id == item_pedido_id).first()
+    if item_pedido is None:
+        raise HTTPException(status_code=404, detail="Item de pedido não encontrado")
+    return item_pedido
+
+# Endpoint para atualizar um item de pedido
+@app.put("/itens_pedido/{item_pedido_id}", response_model=ItemPedidoResponse, tags=["Itens de Pedido"])
+def update_item_pedido(item_pedido_id: int, item_pedido: ItemPedidoCreate, db: Session = Depends(get_db)):
+    db_item_pedido = db.query(ItemPedido).filter(ItemPedido.id == item_pedido_id).first()
+    if db_item_pedido is None:
+        raise HTTPException(status_code=404, detail="Item de pedido não encontrado")
+    for key, value in item_pedido.dict().items():
+        setattr(db_item_pedido, key, value)
+    db.commit()
+    db.refresh(db_item_pedido)
+    return db_item_pedido
+
+# Endpoint para excluir um item de pedido
+@app.delete("/itens_pedido/{item_pedido_id}", response_model=ItemPedidoResponse, tags=["Itens de Pedido"])
+def delete_item_pedido(item_pedido_id: int, db: Session = Depends(get_db)):
+    db_item_pedido = db.query(ItemPedido).filter(ItemPedido.id == item_pedido_id).first()
+    if db_item_pedido is None:
+        raise HTTPException(status_code=404, detail="Item de pedido não encontrado")
+    db.delete(db_item_pedido)
+    db.commit()
+    return db_item_pedido
+
+# Endpoint para criar um pedido
+@app.post("/pedidos/", response_model=PedidoResponse, tags=["Pedidos"])
+def create_pedido(pedido: PedidoCreate, db: Session = Depends(get_db)):
+    db_pedido = Pedido(**pedido.dict())
+    db.add(db_pedido)
+    db.commit()
+    db.refresh(db_pedido)
+    return db_pedido
+
+# Endpoint para listar todos os pedidos
+@app.get("/pedidos/", response_model=List[PedidoResponse], tags=["Pedidos"])
+def read_pedidos(db: Session = Depends(get_db)):
+    pedidos = db.query(Pedido).all()
+    return pedidos
+
+# Endpoint para buscar um pedido por ID
+@app.get("/pedidos/{pedido_id}", response_model=PedidoResponse, tags=["Pedidos"])
+def read_pedido(pedido_id: int, db: Session = Depends(get_db)):
+    pedido = db.query(Pedido).filter(Pedido.id == pedido_id).first()
+    if pedido is None:
+        raise HTTPException(status_code=404, detail="Pedido não encontrado")
+    return pedido
+
+# Endpoint para atualizar um pedido
+@app.put("/pedidos/{pedido_id}", response_model=PedidoResponse, tags=["Pedidos"])
+def update_pedido(pedido_id: int, pedido: PedidoCreate, db: Session = Depends(get_db)):
+    db_pedido = db.query(Pedido).filter(Pedido.id == pedido_id).first()
+    if db_pedido is None:
+        raise HTTPException(status_code=404, detail="Pedido não encontrado")
+    for key, value in pedido.dict().items():
+        setattr(db_pedido, key, value)
+    db.commit()
+    db.refresh(db_pedido)
+    return db_pedido
+
+# Endpoint para excluir um pedido
+@app.delete("/pedidos/{pedido_id}", response_model=PedidoResponse, tags=["Pedidos"])
+def delete_pedido(pedido_id: int, db: Session = Depends(get_db)):
+    db_pedido = db.query(Pedido).filter(Pedido.id == pedido_id).first()
+    if db_pedido is None:
+        raise HTTPException(status_code=404, detail="Pedido não encontrado")
+    db.delete(db_pedido)
+    db.commit()
+    return db_pedido
+
+# Endpoint para criar um cliente
+@app.post("/clientes/", response_model=ClienteResponse, tags=["Clientes"])
+def create_cliente(cliente: ClienteCreate, db: Session = Depends(get_db)):
+    db_cliente = Cliente(**cliente.dict())
+    db.add(db_cliente)
+    db.commit()
+    db.refresh(db_cliente)
+    return db_cliente
+
+# Endpoint para listar todos os clientes
+@app.get("/clientes/", response_model=List[ClienteResponse], tags=["Clientes"])
+def read_clientes(db: Session = Depends(get_db)):
+    clientes = db.query(Cliente).all()
+    return clientes
+
+# Endpoint para buscar um cliente por ID
+@app.get("/clientes/{cliente_id}", response_model=ClienteResponse, tags=["Clientes"])
+def read_cliente(cliente_id: int, db: Session = Depends(get_db)):
+    cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+    if cliente is None:
+        raise HTTPException(status_code=404, detail="Cliente não encontrado")
+    return cliente
+
+# Endpoint para atualizar um cliente
+@app.put("/clientes/{cliente_id}", response_model=ClienteResponse, tags=["Clientes"])
+def update_cliente(cliente_id: int, cliente: ClienteCreate, db: Session = Depends(get_db)):
+    db_cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+    if db_cliente is None:
+        raise HTTPException(status_code=404, detail="Cliente não encontrado")
+    for key, value in cliente.dict().items():
+        setattr(db_cliente, key, value)
+    db.commit()
+    db.refresh(db_cliente)
+    return db_cliente
+
+# Endpoint para excluir um cliente
+@app.delete("/clientes/{cliente_id}", response_model=ClienteResponse, tags=["Clientes"])
+def delete_cliente(cliente_id: int, db: Session = Depends(get_db)):
+    db_cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+    if db_cliente is None:
+        raise HTTPException(status_code=404, detail="Cliente não encontrado")
+    db.delete(db_cliente)
+    db.commit()
+    return db_cliente

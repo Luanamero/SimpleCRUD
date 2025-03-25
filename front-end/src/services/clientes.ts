@@ -10,7 +10,7 @@ export interface Cliente {
 
 export const ClienteService = {
   async listar(): Promise<Cliente[]> {
-    const response = await api.get('/clientes');
+    const response = await api.get('/clientes/');
     return response.data;
   },
 
@@ -20,7 +20,7 @@ export const ClienteService = {
   },
 
   async criar(cliente: Omit<Cliente, 'id'>): Promise<Cliente> {
-    const response = await api.post('/clientes', cliente);
+    const response = await api.post('/clientes/', cliente);
     return response.data;
   },
 

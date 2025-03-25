@@ -33,6 +33,7 @@ export const LivroService = {
   },
 
   async excluir(id: number): Promise<void> {
+    console.log("livro",id)
     await api.delete(`/livros/${id}`);
   },
 };

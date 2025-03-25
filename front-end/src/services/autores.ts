@@ -8,7 +8,7 @@ export interface Autor {
 
 export const AutorService = {
   async listar(): Promise<Autor[]> {
-    const response = await api.get('/autores');
+    const response = await api.get('/autores/');
     return response.data;
   },
 
@@ -18,7 +18,7 @@ export const AutorService = {
   },
 
   async criar(autor: Omit<Autor, 'id'>): Promise<Autor> {
-    const response = await api.post('/autores', autor);
+    const response = await api.post('/autores/', autor);
     return response.data;
   },
 

@@ -9,7 +9,7 @@ export interface Editora {
 
 export const EditoraService = {
   async listar(): Promise<Editora[]> {
-    const response = await api.get('/editoras');
+    const response = await api.get('/editoras/');
     return response.data;
   },
 
@@ -19,7 +19,7 @@ export const EditoraService = {
   },
 
   async criar(editora: Omit<Editora, 'id'>): Promise<Editora> {
-    const response = await api.post('/editoras', editora);
+    const response = await api.post('/editoras/', editora);
     return response.data;
   },
 

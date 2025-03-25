@@ -18,7 +18,7 @@ export interface ItemPedido {
 
 export const PedidoService = {
   async listar(): Promise<Pedido[]> {
-    const response = await api.get('/pedidos');
+    const response = await api.get('/pedidos/');
     return response.data;
   },
 
@@ -28,7 +28,7 @@ export const PedidoService = {
   },
 
   async criar(pedido: Omit<Pedido, 'id'>): Promise<Pedido> {
-    const response = await api.post('/pedidos', pedido);
+    const response = await api.post('/pedidos/', pedido);
     return response.data;
   },
 
