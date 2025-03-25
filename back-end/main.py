@@ -1,765 +1,318 @@
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import Optional, List
 import psycopg2
 from psycopg2.extras import RealDictCursor
-import os
+from livroCrud import LivroCRUD  # Importe sua classe LivroCRUD aqui
+from schemas import LivroCreate, LivroResponse, ClienteCreate, ClienteResponse, AutorCreate, AutorResponse, ItemPedidoCreate, ItemPedidoResponse, PedidoCreate, PedidoResponse, EditoraCreate, EditoraResponse
 
-class LivroCRUD:
-    @staticmethod
-    def create_connection():
-        """Cria e retorna uma conexão com o banco de dados"""
-        return psycopg2.connect(
-           "postgresql://postgres:OPMuEZPtCOBSIxbSGdbYDYgjcGlwQebr@caboose.proxy.rlwy.net:56510/railway"
-        )
+app = FastAPI()
 
-# ===== CRUD Livro =======
-
-    @staticmethod
-    def create_livro(titulo, estoque, ano_publicacao, preco, editora_id, autor_id, genero=None):
-        """Cria um novo livro no banco de dados, com gênero opcional"""
-        conn = LivroCRUD.create_connection()
-        cur = conn.cursor()
-        try:
-            cur.execute(
-                """
-                INSERT INTO livro (titulo, estoque, ano_publicacao, preco, editora_id, autor_id, genero)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                RETURNING *;
-                """,
-                (titulo, estoque, ano_publicacao, preco, editora_id, autor_id, genero)
-            )
-            new_livro = cur.fetchone()
-            conn.commit()
-            return new_livro
-        except Exception as e:
-            conn.rollback()
-            raise Exception(f"Erro ao criar livro: {str(e)}")
-        finally:
-            cur.close()
-            conn.close()
-
-    @staticmethod
-    def get_all_livros():
-        """Retorna todos os livros do banco de dados"""
-        conn = LivroCRUD.create_connection()
-        cur = conn.cursor()
-        try:
-            cur.execute("SELECT * FROM livro;")
-            return cur.fetchall()
-        finally:
-            cur.close()
-            conn.close()
-
-    @staticmethod
-    def get_livro_by_id(livro_id):
-        """Retorna um livro específico pelo ID"""
-        conn = LivroCRUD.create_connection()
-        cur = conn.cursor()
-        try:
-            cur.execute("SELECT * FROM livro WHERE id = %s;", (livro_id,))
-            livro = cur.fetchone()
-            if livro is None:
-                raise Exception("Livro não encontrado")
-            return livro
-        finally:
-            cur.close()
-            conn.close()
-
-    @staticmethod
-    def update_livro(livro_id, titulo=None, ano_publicacao=None, preco=None, editora_id=None, autor_id=None, genero = None):
-        """Atualiza um livro existente"""
-        conn = LivroCRUD.create_connection()
-        cur = conn.cursor()
-        try:
-            # Primeiro, obtemos os valores atuais
-            cur.execute("SELECT * FROM livro WHERE id = %s;", (livro_id,))
-            livro = cur.fetchone()
-            if livro is None:
-                raise Exception("Livro não encontrado")
-
-            # Atualiza apenas os campos fornecidos
-            update_fields = []
-            update_values = []
-            
-            if titulo is not None:
-                update_fields.append("titulo = %s")
-                update_values.append(titulo)
-            if genero is not None:
-                update_fields.append("genero = %s")
-                update_values.append(genero)
-            if ano_publicacao is not None:
-                update_fields.append("ano_publicacao = %s")
-                update_values.append(ano_publicacao)
-            if preco is not None:
-                update_fields.append("preco = %s")
-                update_values.append(preco)
-            if editora_id is not None:
-                update_fields.append("editora_id = %s")
-                update_values.append(editora_id)
-            if autor_id is not None:
-                update_fields.append("autor_id = %s")
-                update_values.append(autor_id)
-
-            if not update_fields:
-                raise Exception("Nenhum campo para atualizar")
-
-            update_values.append(livro_id)
-            update_query = f"""
-                UPDATE livro
-                SET {', '.join(update_fields)}
-                WHERE id = %s
-                RETURNING *;
-            """
-
-            cur.execute(update_query, update_values)
-            updated_livro = cur.fetchone()
-            conn.commit()
-            return updated_livro
-        except Exception as e:
-            conn.rollback()
-            raise Exception(f"Erro ao atualizar livro: {str(e)}")
-        finally:
-            cur.close()
-            conn.close()
-
-    @staticmethod
-    def delete_livro(livro_id):
-        """Remove um livro do banco de dados"""
-        conn = LivroCRUD.create_connection()
-        cur = conn.cursor()
-        try:
-            # Verifica se o livro existe
-            cur.execute("SELECT * FROM livro WHERE id = %s;", (livro_id,))
-            livro = cur.fetchone()
-            if livro is None:
-                raise Exception("Livro não encontrado")
-
-            cur.execute("DELETE FROM livro WHERE id = %s RETURNING *;", (livro_id,))
-            deleted_livro = cur.fetchone()
-            conn.commit()
-            return deleted_livro
-        except Exception as e:
-            conn.rollback()
-            raise Exception(f"Erro ao deletar livro: {str(e)}")
-        finally:
-            cur.close()
-            conn.close()
-
-# ===== CRUD Editora =======
-
-    @staticmethod
-    def create_editora(nome, endereco):
-            """Cria uma nova editora no banco de dados"""
-            conn = LivroCRUD.create_connection()
-            cur = conn.cursor()
-            try:
-                cur.execute(
-                    """
-                    INSERT INTO editora (nome, endereco)
-                    VALUES (%s, %s)
-                    RETURNING *;
-                    """,
-                    (nome, endereco)
-                )
-                new_editora = cur.fetchone()
-                conn.commit()
-                return new_editora
-            except Exception as e:
-                conn.rollback()
-                raise Exception(f"Erro ao criar editora: {str(e)}")
-            finally:
-                cur.close()
-                conn.close()
-
-    @staticmethod
-    def get_all_editoras():
-            """Retorna todos os livros do banco de dados"""
-            conn = LivroCRUD.create_connection()
-            cur = conn.cursor()
-            try:
-                cur.execute("SELECT * FROM editora;")
-                return cur.fetchall()
-            finally:
-                cur.close()
-                conn.close()
-
-    @staticmethod
-    def get_editora_by_id(editora_id):
-            """Retorna uma editora específica pelo ID"""
-            conn = LivroCRUD.create_connection()
-            cur = conn.cursor()
-            try:
-                cur.execute("SELECT * FROM editoras WHERE id = %s;", (editora_id,))
-                editora = cur.fetchone()
-                if editora is None:
-                    raise Exception("Editora não encontrado")
-                return editora
-            finally:
-                cur.close()
-                conn.close()
-
-    @staticmethod
-    def delete_editora(editora_id):
-        """Remove um livro do banco de dados"""
-        conn = LivroCRUD.create_connection()
-        cur = conn.cursor()
-        try:
-            # Verifica se o livro existe
-            cur.execute("SELECT * FROM editoras WHERE id = %s;", (editora_id,))
-            editora = cur.fetchone()
-            if editora is None:
-                raise Exception("Editora não encontrado")
-
-            cur.execute("DELETE FROM editoras WHERE id = %s RETURNING *;", (editora_id,))
-            deleted_editora = cur.fetchone()
-            conn.commit()
-            return deleted_editora
-        except Exception as e:
-            conn.rollback()
-            raise Exception(f"Erro ao deletar editoras: {str(e)}")
-        finally:
-            cur.close()
-            conn.close()
-
-    @staticmethod
-    def update_editora(editora_id, novo_nome=None, novo_endereco=None):
-        """Atualiza os dados de um editora no banco de dados"""
-        conn = LivroCRUD.create_connection()
-        cur = conn.cursor()
-        try:
-            # Verifica se o editora existe
-            cur.execute("SELECT * FROM editora WHERE id = %s;", (editora_id,))
-            editora = cur.fetchone()
-            if editora is None:
-                raise Exception("editora não encontrado")
-
-            # Monta a query dinamicamente (para atualizar apenas os campos fornecidos)
-            query = "UPDATE editora SET "
-            params = []
-            
-            if novo_nome is not None:
-                query += "nome = %s, "
-                params.append(novo_nome)
-            
-            if novo_endereco is not None:
-                query += "biografia = %s, "
-                params.append(novo_endereco)
-            
-            # Remove a vírgula extra no final e adiciona a condição WHERE
-            query = query.rstrip(", ") + " WHERE id = %s RETURNING *;"
-            params.append(editora_id)
-
-            # Executa o UPDATE
-            cur.execute(query, tuple(params))
-            updated_editora = cur.fetchone()
-            conn.commit()
-            return updated_editora
-        except Exception as e:
-            conn.rollback()
-            raise Exception(f"Erro ao atualizar editora: {str(e)}")
-        finally:
-            cur.close()
-            conn.close()
-
-# ===== CRUD Autor =======
-    @staticmethod
-    def create_autor(nome, nacionalidade):
-            """Cria uma nova autor no banco de dados"""
-            conn = LivroCRUD.create_connection()
-            cur = conn.cursor()
-            try:
-                cur.execute(
-                    """
-                    INSERT INTO autor (nome, nacionalidade)
-                    VALUES (%s, %s)
-                    RETURNING *;
-                    """,
-                    (nome, nacionalidade)
-                )
-                new_autor = cur.fetchone()
-                conn.commit()
-                return new_autor
-            except Exception as e:
-                conn.rollback()
-                raise Exception(f"Erro ao criar autor: {str(e)}")
-            finally:
-                cur.close()
-                conn.close()
-
-    @staticmethod
-    def get_all_autor():
-            """Retorna todos os autores do banco de dados"""
-            conn = LivroCRUD.create_connection()
-            cur = conn.cursor()
-            try:
-                cur.execute("SELECT * FROM autor;")
-                return cur.fetchall()
-            finally:
-                cur.close()
-                conn.close()
-
-    @staticmethod
-    def get_autor_by_id(autor_id):
-            """Retorna uma autor específica pelo ID"""
-            conn = LivroCRUD.create_connection()
-            cur = conn.cursor()
-            try:
-                cur.execute("SELECT * FROM autor WHERE id = %s;", (autor_id,))
-                autor = cur.fetchone()
-                if autor is None:
-                    raise Exception("autor não encontrado")
-                return autor
-            finally:
-                cur.close()
-                conn.close()
-
-    @staticmethod
-    def delete_autor(autor_id):
-        """Remove um livro do banco de dados"""
-        conn = LivroCRUD.create_connection()
-        cur = conn.cursor()
-        try:
-            # Verifica se o livro existe
-            cur.execute("SELECT * FROM autor WHERE id = %s;", (autor_id,))
-            autor = cur.fetchone()
-            if autor is None:
-                raise Exception("autor não encontrado")
-
-            cur.execute("DELETE FROM autor WHERE id = %s RETURNING *;", (autor_id,))
-            deleted_autor = cur.fetchone()
-            conn.commit()
-            return deleted_autor
-        except Exception as e:
-            conn.rollback()
-            raise Exception(f"Erro ao deletar autor: {str(e)}")
-        finally:
-            cur.close()
-            conn.close()
-
-    @staticmethod
-    def update_autor(autor_id, novo_nome=None, nova_biografia=None):
-        """Atualiza os dados de um autor no banco de dados"""
-        conn = LivroCRUD.create_connection()
-        cur = conn.cursor()
-        try:
-            # Verifica se o autor existe
-            cur.execute("SELECT * FROM autor WHERE id = %s;", (autor_id,))
-            autor = cur.fetchone()
-            if autor is None:
-                raise Exception("Autor não encontrado")
-
-            # Monta a query dinamicamente (para atualizar apenas os campos fornecidos)
-            query = "UPDATE autor SET "
-            params = []
-            
-            if novo_nome is not None:
-                query += "nome = %s, "
-                params.append(novo_nome)
-            
-            if nova_biografia is not None:
-                query += "biografia = %s, "
-                params.append(nova_biografia)
-            
-            # Remove a vírgula extra no final e adiciona a condição WHERE
-            query = query.rstrip(", ") + " WHERE id = %s RETURNING *;"
-            params.append(autor_id)
-
-            # Executa o UPDATE
-            cur.execute(query, tuple(params))
-            updated_autor = cur.fetchone()
-            conn.commit()
-            return updated_autor
-        except Exception as e:
-            conn.rollback()
-            raise Exception(f"Erro ao atualizar autor: {str(e)}")
-        finally:
-            cur.close()
-            conn.close()
-
-# ====== CRUD Cliente ======
-
-    @staticmethod
-    def create_cliente(nome, email, endereco, telefone = None):
-            """Cria uma nova cliente no banco de dados"""
-            conn = LivroCRUD.create_connection()
-            cur = conn.cursor()
-            try:
-                cur.execute(
-                    """
-                    INSERT INTO cliente (nome, email, endereco, telefone)
-                    VALUES (%s, %s, %s, %s)
-                    RETURNING *;
-                    """,
-                    (nome, email, endereco, telefone)
-                )
-                new_cliente = cur.fetchone()
-                conn.commit()
-                return new_cliente
-            except Exception as e:
-                conn.rollback()
-                raise Exception(f"Erro ao criar cliente: {str(e)}")
-            finally:
-                cur.close()
-                conn.close()
-
-    @staticmethod
-    def get_all_cliente():
-            """Retorna todos os clientes do banco de dados"""
-            conn = LivroCRUD.create_connection()
-            cur = conn.cursor()
-            try:
-                cur.execute("SELECT * FROM cliente;")
-                return cur.fetchall()
-            finally:
-                cur.close()
-                conn.close()
-    
-    @staticmethod
-    def get_cliente_by_id(cliente_id):
-            """Retorna uma cliente específica pelo ID"""
-            conn = LivroCRUD.create_connection()
-            cur = conn.cursor()
-            try:
-                cur.execute("SELECT * FROM cliente WHERE id = %s;", (cliente_id,))
-                cliente = cur.fetchone()
-                if cliente is None:
-                    raise Exception("cliente não encontrado")
-                return cliente
-            finally:
-                cur.close()
-                conn.close()
-
-    @staticmethod
-    def delete_cliente(cliente_id):
-        """Remove um livro do banco de dados"""
-        conn = LivroCRUD.create_connection()
-        cur = conn.cursor()
-        try:
-            # Verifica se o livro existe
-            cur.execute("SELECT * FROM cliente WHERE id = %s;", (cliente_id,))
-            cliente = cur.fetchone()
-            if cliente is None:
-                raise Exception("cliente não encontrado")
-
-            cur.execute("DELETE FROM cliente WHERE id = %s RETURNING *;", (cliente_id,))
-            deleted_cliente = cur.fetchone()
-            conn.commit()
-            return deleted_cliente
-        except Exception as e:
-            conn.rollback()
-            raise Exception(f"Erro ao deletar cliente: {str(e)}")
-        finally:
-            cur.close()
-            conn.close()
-
-    @staticmethod
-    def update_cliente(cliente_id, novo_nome=None, novo_endereco=None, novo_telefone=None, novo_email=None):
-        """Atualiza os dados de um cliente no banco de dados"""
-        conn = LivroCRUD.create_connection()
-        cur = conn.cursor()
-        try:
-            # Verifica se o cliente existe
-            cur.execute("SELECT * FROM cliente WHERE id = %s;", (cliente_id,))
-            cliente = cur.fetchone()
-            if cliente is None:
-                raise Exception("cliente não encontrado")
-
-            # Monta a query dinamicamente (para atualizar apenas os campos fornecidos)
-            query = "UPDATE cliente SET "
-            params = []
-            
-            if novo_nome is not None:
-                query += "nome = %s, "
-                params.append(novo_nome)
-            
-            if novo_endereco is not None:
-                query += "endereco = %s, "
-                params.append(novo_endereco)
-
-            if novo_telefone is not None:
-                query += "telefone = %s, "
-                params.append(novo_telefone)
-            
-            if novo_email is not None:
-                query += "email = %s, "
-                params.append(novo_email)
-
-            # Remove a vírgula extra no final e adiciona a condição WHERE
-            query = query.rstrip(", ") + " WHERE id = %s RETURNING *;"
-            params.append(cliente_id)
-
-            # Executa o UPDATE
-            cur.execute(query, tuple(params))
-            updated_cliente = cur.fetchone()
-            conn.commit()
-            return updated_cliente
-        except Exception as e:
-            conn.rollback()
-            raise Exception(f"Erro ao atualizar cliente: {str(e)}")
-        finally:
-            cur.close()
-            conn.close()
-
-# ===== CRUD itemPedido =======
-
-    @staticmethod
-    def create_itemPedido(livro_id, quantidade, preco_unitario):
-            """Cria uma nova itemPedido no banco de dados"""
-            conn = LivroCRUD.create_connection()
-            cur = conn.cursor()
-            try:
-                cur.execute(
-                    """
-                    INSERT INTO itemPedido (livro_id, quantidade, preco_unitario)
-                    VALUES (%s, %s, %s)
-                    RETURNING *;
-                    """,
-                    (livro_id, quantidade, preco_unitario)
-                )
-                new_itemPedido = cur.fetchone()
-                conn.commit()
-                return new_itemPedido
-            except Exception as e:
-                conn.rollback()
-                raise Exception(f"Erro ao criar itemPedido: {str(e)}")
-            finally:
-                cur.close()
-                conn.close()
-
-    @staticmethod
-    def get_all_itemPedido():
-            """Retorna todos os itemPedidos do banco de dados"""
-            conn = LivroCRUD.create_connection()
-            cur = conn.cursor()
-            try:
-                cur.execute("SELECT * FROM itemPedido;")
-                return cur.fetchall()
-            finally:
-                cur.close()
-                conn.close()
-
-    @staticmethod
-    def get_itemPedido_by_id(itemPedido_id):
-            """Retorna uma itemPedido específica pelo ID"""
-            conn = LivroCRUD.create_connection()
-            cur = conn.cursor()
-            try:
-                cur.execute("SELECT * FROM itemPedido WHERE id = %s;", (itemPedido_id,))
-                itemPedido = cur.fetchone()
-                if itemPedido is None:
-                    raise Exception("itemPedido não encontrado")
-                return itemPedido
-            finally:
-                cur.close()
-                conn.close()
-
-    @staticmethod
-    def delete_itemPedido(itemPedido_id):
-        """Remove um livro do banco de dados"""
-        conn = LivroCRUD.create_connection()
-        cur = conn.cursor()
-        try:
-            # Verifica se o livro existe
-            cur.execute("SELECT * FROM itemPedido WHERE id = %s;", (itemPedido_id,))
-            itemPedido = cur.fetchone()
-            if itemPedido is None:
-                raise Exception("itemPedido não encontrado")
-
-            cur.execute("DELETE FROM itemPedido WHERE id = %s RETURNING *;", (itemPedido_id,))
-            deleted_itemPedido = cur.fetchone()
-            conn.commit()
-            return deleted_itemPedido
-        except Exception as e:
-            conn.rollback()
-            raise Exception(f"Erro ao deletar itemPedido: {str(e)}")
-        finally:
-            cur.close()
-            conn.close()
-
-    @staticmethod
-    def update_itemPedido(itemPedido_id, nova_quantidade, novo_preco_unitario):
-        """Atualiza os dados de um itemPedido no banco de dados"""
-        conn = LivroCRUD.create_connection()
-        cur = conn.cursor()
-        try:
-            # Verifica se o itemPedido existe
-            cur.execute("SELECT * FROM itemPedido WHERE id = %s;", (itemPedido_id,))
-            itemPedido = cur.fetchone()
-            if itemPedido is None:
-                raise Exception("itemPedido não encontrado")
-
-            # Monta a query dinamicamente (para atualizar apenas os campos fornecidos)
-            query = "UPDATE itemPedido SET "
-            params = []
-            
-            if nova_quantidade is not None:
-                query += "quantidade = %s, "
-                params.append(nova_quantidade)
-            
-            if novo_preco_unitario is not None:
-                query += "preco_unitario = %s, "
-                params.append(novo_preco_unitario)
-
-            # Remove a vírgula extra no final e adiciona a condição WHERE
-            query = query.rstrip(", ") + " WHERE id = %s RETURNING *;"
-            params.append(itemPedido_id)
-
-            # Executa o UPDATE
-            cur.execute(query, tuple(params))
-            updated_itemPedido = cur.fetchone()
-            conn.commit()
-            return updated_itemPedido
-        except Exception as e:
-            conn.rollback()
-            raise Exception(f"Erro ao atualizar itemPedido: {str(e)}")
-        finally:
-            cur.close()
-            conn.close()
-
-# ===== CRUD Pedido =======
-    @staticmethod
-    def create_pedido(cliente_id, data, total):
-            """Cria uma nova pedido no banco de dados"""
-            conn = LivroCRUD.create_connection()
-            cur = conn.cursor()
-            try:
-                cur.execute(
-                    """
-                    INSERT INTO pedido (cliente_id, data, total)
-                    VALUES (%s, %s, %s)
-                    RETURNING *;
-                    """,
-                    (cliente_id, data, total)
-                )
-                new_pedido = cur.fetchone()
-                conn.commit()
-                return new_pedido
-            except Exception as e:
-                conn.rollback()
-                raise Exception(f"Erro ao criar pedido: {str(e)}")
-            finally:
-                cur.close()
-                conn.close()
-
-    @staticmethod
-    def get_all_pedido():
-            """Retorna todos os pedidos do banco de dados"""
-            conn = LivroCRUD.create_connection()
-            cur = conn.cursor()
-            try:
-                cur.execute("SELECT * FROM pedido;")
-                return cur.fetchall()
-            finally:
-                cur.close()
-                conn.close()
-
-    @staticmethod
-    def get_pedido_by_id(pedido_id):
-            """Retorna uma pedido específica pelo ID"""
-            conn = LivroCRUD.create_connection()
-            cur = conn.cursor()
-            try:
-                cur.execute("SELECT * FROM pedido WHERE id = %s;", (pedido_id,))
-                pedido = cur.fetchone()
-                if pedido is None:
-                    raise Exception("pedido não encontrado")
-                return pedido
-            finally:
-                cur.close()
-                conn.close()
-
-    @staticmethod
-    def delete_pedido(pedido_id):
-        """Remove um livro do banco de dados"""
-        conn = LivroCRUD.create_connection()
-        cur = conn.cursor()
-        try:
-            # Verifica se o livro existe
-            cur.execute("SELECT * FROM pedido WHERE id = %s;", (pedido_id,))
-            pedido = cur.fetchone()
-            if pedido is None:
-                raise Exception("pedido não encontrado")
-
-            cur.execute("DELETE FROM pedido WHERE id = %s RETURNING *;", (pedido_id,))
-            deleted_pedido = cur.fetchone()
-            conn.commit()
-            return deleted_pedido
-        except Exception as e:
-            conn.rollback()
-            raise Exception(f"Erro ao deletar pedido: {str(e)}")
-        finally:
-            cur.close()
-            conn.close()
-
-    @staticmethod
-    def update_pedido(pedido_id, nova_data, novo_total):
-        """Atualiza os dados de um pedido no banco de dados"""
-        conn = LivroCRUD.create_connection()
-        cur = conn.cursor()
-        try:
-            # Verifica se o pedido existe
-            cur.execute("SELECT * FROM pedido WHERE id = %s;", (pedido_id,))
-            pedido = cur.fetchone()
-            if pedido is None:
-                raise Exception("pedido não encontrado")
-
-            # Monta a query dinamicamente (para atualizar apenas os campos fornecidos)
-            query = "UPDATE pedido SET "
-            params = []
-            
-            if nova_data is not None:
-                query += "data = %s, "
-                params.append(nova_data)
-            
-            if novo_total is not None:
-                query += "preco_unitario = %s, "
-                params.append(novo_total)
-
-            # Remove a vírgula extra no final e adiciona a condição WHERE
-            query = query.rstrip(", ") + " WHERE id = %s RETURNING *;"
-            params.append(pedido_id)
-
-            # Executa o UPDATE
-            cur.execute(query, tuple(params))
-            updated_pedido = cur.fetchone()
-            conn.commit()
-            return updated_pedido
-        except Exception as e:
-            conn.rollback()
-            raise Exception(f"Erro ao atualizar pedido: {str(e)}")
-        finally:
-            cur.close()
-            conn.close()
-
-
-
-# Exemplo de uso:
-print("teste")
-if __name__ == "__main__":
+# ============== Rotas para Livros ==============
+@app.post("/livros/", response_model=dict, tags="Livros")
+def criar_livro(livro: LivroCreate):
     try:
-        # Criar um novo editora
-        #nova_editora = LivroCRUD.create_editora(
-            #nome = "Penguin",
-            #endereco= "Londres"
-        #)
-        #print("Editora criada:", nova_editora)
-
-        # Buscar todos os livros
-        editoras = LivroCRUD.get_all_editoras()
-        print("Todos as editoras:", editoras)
-
-        # Buscar um livro específico
-        #editora = LivroCRUD.get_editora_by_id(nova_editora['id'])
-        #print("Editora encontrado:", editora)
-
-        # Atualizar um livro
-        #editora_atualizado = LivroCRUD.update_editora(
-            #editora_id= nova_editora['id'],
-            #endereco = "Londres, Inglaterra"
-       # )
-        #print("Livro atualizado:", editora_atualizado)
-
-        # Deletar um livro
-        #editora_deletado = LivroCRUD.delete_editora(nova_editora['id'])
-        #print("Livro deletado:", editora_deletado)
-
+        novo_livro = LivroCRUD.create_livro(
+            titulo=livro.titulo,
+            estoque=livro.estoque,
+            ano_publicacao=livro.ano_publicacao,
+            preco=livro.preco,
+            editora_id=livro.editora_id,
+            autor_id=livro.autor_id,
+            genero=livro.genero
+        )
+        return {"message": "Livro criado com sucesso", "data": novo_livro}
     except Exception as e:
-        print("Ocorreu um erro:", str(e))
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/livros/", response_model=List[dict], tags="Livros")
+def listar_livros():
+    try:
+        livros = LivroCRUD.get_all_livros()
+        return livros
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/livros/{livro_id}", response_model=dict, tags="Livros")
+def buscar_livro(livro_id: int):
+    try:
+        livro = LivroCRUD.get_livro_by_id(livro_id)
+        return livro
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@app.put("/livros/{livro_id}", response_model=dict, tags="Livros")
+def atualizar_livro(livro_id: int, livro: LivroCreate):
+    try:
+        updated_livro = LivroCRUD.update_livro(
+            livro_id=livro_id,
+            titulo=livro.titulo,
+            estoque=livro.estoque,
+            ano_publicacao=livro.ano_publicacao,
+            preco=livro.preco,
+            editora_id=livro.editora_id,
+            autor_id=livro.autor_id,
+            genero=livro.genero
+        )
+        return {"message": "Livro atualizado", "data": updated_livro}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.delete("/livros/{livro_id}", response_model=dict, tags="Livros")
+def deletar_livro(livro_id: int):
+    try:
+        deleted_livro = LivroCRUD.delete_livro(livro_id)
+        return {"message": "Livro deletado", "data": deleted_livro}
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    
+
+# ============== Rotas para Editoras ==============
+@app.post("/editoras/", response_model=dict, tags="Editoras")
+def criar_editora(editora: EditoraCreate):
+    try:
+        nova_editora = LivroCRUD.create_editora(
+            nome=editora.nome,
+            endereco=editora.endereco
+        )
+        return {"message": "Editora criada com sucesso", "data": nova_editora}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/editoras/", response_model=List[dict], tags="Editoras")
+def listar_editoras():
+    try:
+        editoras = LivroCRUD.get_all_editoras()
+        return editoras
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/editoras/{editora_id}", response_model=dict, tags="Editoras")
+def buscar_editora(editora_id: int):
+    try:
+        editora = LivroCRUD.get_editora_by_id(editora_id)
+        return editora
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@app.put("/editoras/{editora_id}", response_model=dict, tags="Editoras")
+def atualizar_editora(editora_id: int, editora: EditoraCreate):
+    try:
+        updated_editora = LivroCRUD.update_editora(
+            editora_id=editora_id,
+            novo_nome=editora.nome,
+            novo_endereco=editora.endereco
+        )
+        return {"message": "Editora atualizada", "data": updated_editora}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.delete("/editoras/{editora_id}", response_model=dict, tags="Editoras")
+def deletar_editora(editora_id: int):
+    try:
+        deleted_editora = LivroCRUD.delete_editora(editora_id)
+        return {"message": "Editora deletada", "data": deleted_editora}
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+# ============== Rotas para Autores ==============
+@app.post("/autores/", response_model=dict, tags="Autores")
+def criar_autor(autor: AutorCreate):
+    try:
+        novo_autor = LivroCRUD.create_autor(
+            nome=autor.nome,
+            nacionalidade=autor.nacionalidade
+        )
+        return {"message": "Autor criado com sucesso", "data": novo_autor}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/autores/", response_model=List[dict], tags="Autores")
+def listar_autores():
+    try:
+        autores = LivroCRUD.get_all_autor()
+        return autores
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/autores/{autor_id}", response_model=dict, tags="Autores")
+def buscar_autor(autor_id: int):
+    try:
+        autor = LivroCRUD.get_autor_by_id(autor_id)
+        return autor
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@app.put("/autores/{autor_id}", response_model=dict, tags="Autores")
+def atualizar_autor(autor_id: int, autor: AutorCreate):
+    try:
+        updated_autor = LivroCRUD.update_autor(
+            autor_id=autor_id,
+            novo_nome=autor.nome,
+            nova_biografia=autor.nacionalidade
+        )
+        return {"message": "Autor atualizado", "data": updated_autor}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.delete("/autores/{autor_id}", response_model=dict, tags="Autores")
+def deletar_autor(autor_id: int):
+    try:
+        deleted_autor = LivroCRUD.delete_autor(autor_id)
+        return {"message": "Autor deletado", "data": deleted_autor}
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+# ============== Rotas para Clientes ==============
+@app.post("/clientes/", response_model=dict, tags="Clientes")
+def criar_cliente(cliente: ClienteCreate):
+    try:
+        novo_cliente = LivroCRUD.create_cliente(
+            nome=cliente.nome,
+            email=cliente.email,
+            endereco=cliente.endereco,
+            telefone=cliente.telefone
+        )
+        return {"message": "Cliente criado com sucesso", "data": novo_cliente}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/clientes/", response_model=List[dict], tags="Clientes")
+def listar_clientes():
+    try:
+        clientes = LivroCRUD.get_all_cliente()
+        return clientes
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/clientes/{cliente_id}", response_model=dict, tags="Clientes")
+def buscar_cliente(cliente_id: int):
+    try:
+        cliente = LivroCRUD.get_cliente_by_id(cliente_id)
+        return cliente
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@app.put("/clientes/{cliente_id}", response_model=dict, tags="Clientes")
+def atualizar_cliente(cliente_id: int, cliente: ClienteCreate):
+    try:
+        updated_cliente = LivroCRUD.update_cliente(
+            cliente_id=cliente_id,
+            novo_nome=cliente.nome,
+            novo_email=cliente.email,
+            novo_endereco=cliente.endereco,
+            novo_telefone=cliente.telefone
+        )
+        return {"message": "Cliente atualizado", "data": updated_cliente}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.delete("/clientes/{cliente_id}", response_model=dict, tags="Clientes")
+def deletar_cliente(cliente_id: int):
+    try:
+        deleted_cliente = LivroCRUD.delete_cliente(cliente_id)
+        return {"message": "Cliente deletado", "data": deleted_cliente}
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+# ============== Rotas para Pedidos ==============
+@app.post("/pedidos/", response_model=dict, tags="Pedidos")
+def criar_pedido(pedido: PedidoCreate):
+    try:
+        novo_pedido = LivroCRUD.create_pedido(
+            cliente_id=pedido.cliente_id,
+            data=pedido.data,
+            total=pedido.total
+        )
+        return {"message": "Pedido criado com sucesso", "data": novo_pedido}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/pedidos/", response_model=List[dict], tags="Pedidos")
+def listar_pedidos():
+    try:
+        pedidos = LivroCRUD.get_all_pedido()
+        return pedidos
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/pedidos/{pedido_id}", response_model=dict, tags="Pedidos")
+def buscar_pedido(pedido_id: int):
+    try:
+        pedido = LivroCRUD.get_pedido_by_id(pedido_id)
+        return pedido
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@app.put("/pedidos/{pedido_id}", response_model=dict, tags="Pedidos")
+def atualizar_pedido(pedido_id: int, pedido: PedidoCreate):
+    try:
+        updated_pedido = LivroCRUD.update_pedido(
+            pedido_id=pedido_id,
+            nova_data=pedido.data,
+            novo_total=pedido.total
+        )
+        return {"message": "Pedido atualizado", "data": updated_pedido}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.delete("/pedidos/{pedido_id}", response_model=dict, tags="Pedidos")
+def deletar_pedido(pedido_id: int):
+    try:
+        deleted_pedido = LivroCRUD.delete_pedido(pedido_id)
+        return {"message": "Pedido deletado", "data": deleted_pedido}
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+# ============== Rotas para Itens de Pedido ==============
+@app.post("/itens-pedido/", response_model=dict, tags="ItensPedidos")
+def criar_item_pedido(item: ItemPedidoCreate):
+    try:
+        novo_item = LivroCRUD.create_itemPedido(
+            livro_id=item.livro_id,
+            quantidade=item.quantidade,
+            preco_unitario=item.preco_unitario
+        )
+        return {"message": "Item de pedido criado com sucesso", "data": novo_item}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/itens-pedido/", response_model=List[dict], tags="ItensPedidos")
+def listar_itens_pedido():
+    try:
+        itens = LivroCRUD.get_all_itemPedido()
+        return itens
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/itens-pedido/{item_id}", response_model=dict, tags="ItensPedidos")
+def buscar_item_pedido(item_id: int):
+    try:
+        item = LivroCRUD.get_itemPedido_by_id(item_id)
+        return item
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@app.put("/itens-pedido/{item_id}", response_model=dict, tags="ItensPedidos")
+def atualizar_item_pedido(item_id: int, item: ItemPedidoCreate):
+    try:
+        updated_item = LivroCRUD.update_itemPedido(
+            itemPedido_id=item_id,
+            nova_quantidade=item.quantidade,
+            novo_preco_unitario=item.preco_unitario
+        )
+        return {"message": "Item de pedido atualizado", "data": updated_item}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.delete("/itens-pedido/{item_id}", response_model=dict, tags="ItensPedidos")
+def deletar_item_pedido(item_id: int):
+    try:
+        deleted_item = LivroCRUD.delete_itemPedido(item_id)
+        return {"message": "Item de pedido deletado", "data": deleted_item}
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="localhost", port=5050)
