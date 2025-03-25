@@ -7,7 +7,6 @@ import Navbar from './components/NavBar';
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
       <BrowserRouter>
-        <Navbar />
         <App />
       </BrowserRouter>
     </React.StrictMode>

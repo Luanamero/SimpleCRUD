@@ -64,7 +64,7 @@ class LivroCRUD:
             conn.close()
 
     @staticmethod
-    def update_livro(livro_id, titulo=None, ano_publicacao=None, preco=None, editora_id=None, autor_id=None, genero = None):
+    def update_livro(livro_id, titulo=None, ano_publicacao=None, preco=None, editora_id=None, autor_id=None, genero = None, estoque = None):
         """Atualiza um livro existente"""
         conn = LivroCRUD.create_connection()
         cur = conn.cursor()
@@ -82,6 +82,9 @@ class LivroCRUD:
             if titulo is not None:
                 update_fields.append("titulo = %s")
                 update_values.append(titulo)
+            if estoque is not None:
+                update_fields.append("estoque = %s")
+                update_values.append(estoque)
             if genero is not None:
                 update_fields.append("genero = %s")
                 update_values.append(genero)

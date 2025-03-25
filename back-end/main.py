@@ -3,10 +3,36 @@ from pydantic import BaseModel
 from typing import Optional, List
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from livroCrud import LivroCRUD  # Importe sua classe LivroCRUD aqui
+from livroCrud import LivroCRUD
 from schemas import LivroCreate, LivroResponse, ClienteCreate, ClienteResponse, AutorCreate, AutorResponse, ItemPedidoCreate, ItemPedidoResponse, PedidoCreate, PedidoResponse, EditoraCreate, EditoraResponse
-
+from models import Livro
+from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI()
+
+# Configuração do CORS
+origins = [
+    "http://localhost:3001",  # Seu frontend React
+    "http://localhost:3000",  # Outras possíveis origens
+    "http://127.0.0.1:3001",  # Alternativa para localhost
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],  # Ou especifique ["GET", "POST", "PUT", "DELETE"]
+    allow_headers=["*"],
+)
+
+# Função auxiliar para transformação de dados
+def transform_to_dict(data, col_names):
+    if not data:
+        return data
+    if isinstance(data, list) and isinstance(data[0], tuple):
+        return [dict(zip(col_names, row)) for row in data]
+    if isinstance(data, tuple):
+        return dict(zip(col_names, data))
+    return data
 
 # ============== Rotas para Livros ==============
 @app.post("/livros/", response_model=dict, tags=["Livros"])
@@ -29,7 +55,9 @@ def criar_livro(livro: LivroCreate):
 def listar_livros():
     try:
         livros = LivroCRUD.get_all_livros()
-        return livros
+        col_names = ["id", "titulo", "autor_id", "preco", "estoque", 
+                    "editora_id", "ano_publicacao", "genero"]
+        return transform_to_dict(livros, col_names)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -37,7 +65,9 @@ def listar_livros():
 def buscar_livro(livro_id: int):
     try:
         livro = LivroCRUD.get_livro_by_id(livro_id)
-        return livro
+        col_names = ["id", "titulo", "autor_id", "preco", "estoque", 
+                    "editora_id", "ano_publicacao", "genero"]
+        return transform_to_dict(livro, col_names)
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -65,7 +95,6 @@ def deletar_livro(livro_id: int):
         return {"message": "Livro deletado", "data": deleted_livro}
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
-    
 
 # ============== Rotas para Editoras ==============
 @app.post("/editoras/", response_model=dict, tags=["Editoras"])
@@ -79,19 +108,21 @@ def criar_editora(editora: EditoraCreate):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.get("/editoras/", response_model=List[dict],  tags=["Editoras"])
+@app.get("/editoras/", response_model=List[dict], tags=["Editoras"])
 def listar_editoras():
     try:
         editoras = LivroCRUD.get_all_editoras()
-        return editoras
+        col_names = ["id", "nome", "endereco"]
+        return transform_to_dict(editoras, col_names)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/editoras/{editora_id}", response_model=dict,  tags=["Editoras"])
+@app.get("/editoras/{editora_id}", response_model=dict, tags=["Editoras"])
 def buscar_editora(editora_id: int):
     try:
         editora = LivroCRUD.get_editora_by_id(editora_id)
-        return editora
+        col_names = ["id", "nome", "endereco"]
+        return transform_to_dict(editora, col_names)
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -107,7 +138,7 @@ def atualizar_editora(editora_id: int, editora: EditoraCreate):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.delete("/editoras/{editora_id}", response_model=dict,  tags=["Editoras"])
+@app.delete("/editoras/{editora_id}", response_model=dict, tags=["Editoras"])
 def deletar_editora(editora_id: int):
     try:
         deleted_editora = LivroCRUD.delete_editora(editora_id)
@@ -131,7 +162,8 @@ def criar_autor(autor: AutorCreate):
 def listar_autores():
     try:
         autores = LivroCRUD.get_all_autor()
-        return autores
+        col_names = ["id", "nome", "nacionalidade"]
+        return transform_to_dict(autores, col_names)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -139,7 +171,8 @@ def listar_autores():
 def buscar_autor(autor_id: int):
     try:
         autor = LivroCRUD.get_autor_by_id(autor_id)
-        return autor
+        col_names = ["id", "nome", "nacionalidade"]
+        return transform_to_dict(autor, col_names)
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -181,7 +214,8 @@ def criar_cliente(cliente: ClienteCreate):
 def listar_clientes():
     try:
         clientes = LivroCRUD.get_all_cliente()
-        return clientes
+        col_names = ["id", "nome", "email", "endereco", "telefone"]
+        return transform_to_dict(clientes, col_names)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -189,7 +223,8 @@ def listar_clientes():
 def buscar_cliente(cliente_id: int):
     try:
         cliente = LivroCRUD.get_cliente_by_id(cliente_id)
-        return cliente
+        col_names = ["id", "nome", "email", "endereco", "telefone"]
+        return transform_to_dict(cliente, col_names)
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -232,7 +267,8 @@ def criar_pedido(pedido: PedidoCreate):
 def listar_pedidos():
     try:
         pedidos = LivroCRUD.get_all_pedido()
-        return pedidos
+        col_names = ["id", "cliente_id", "data", "total"]
+        return transform_to_dict(pedidos, col_names)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -240,7 +276,8 @@ def listar_pedidos():
 def buscar_pedido(pedido_id: int):
     try:
         pedido = LivroCRUD.get_pedido_by_id(pedido_id)
-        return pedido
+        col_names = ["id", "cliente_id", "data", "total"]
+        return transform_to_dict(pedido, col_names)
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -269,6 +306,7 @@ def deletar_pedido(pedido_id: int):
 def criar_item_pedido(item: ItemPedidoCreate):
     try:
         novo_item = LivroCRUD.create_itemPedido(
+            pedido_id=item.pedido_id,
             livro_id=item.livro_id,
             quantidade=item.quantidade,
             preco_unitario=item.preco_unitario
@@ -277,23 +315,25 @@ def criar_item_pedido(item: ItemPedidoCreate):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.get("/itens-pedido/", response_model=List[dict],  tags=["ItensPedidos"])
+@app.get("/itens-pedido/", response_model=List[dict], tags=["ItensPedidos"])
 def listar_itens_pedido():
     try:
         itens = LivroCRUD.get_all_itemPedido()
-        return itens
+        col_names = ["id", "pedido_id", "livro_id", "quantidade", "preco_unitario"]
+        return transform_to_dict(itens, col_names)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/itens-pedido/{item_id}", response_model=dict,  tags=["ItensPedidos"])
+@app.get("/itens-pedido/{item_id}", response_model=dict, tags=["ItensPedidos"])
 def buscar_item_pedido(item_id: int):
     try:
         item = LivroCRUD.get_itemPedido_by_id(item_id)
-        return item
+        col_names = ["id", "pedido_id", "livro_id", "quantidade", "preco_unitario"]
+        return transform_to_dict(item, col_names)
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-@app.put("/itens-pedido/{item_id}", response_model=dict,  tags=["ItensPedidos"])
+@app.put("/itens-pedido/{item_id}", response_model=dict, tags=["ItensPedidos"])
 def atualizar_item_pedido(item_id: int, item: ItemPedidoCreate):
     try:
         updated_item = LivroCRUD.update_itemPedido(
@@ -305,7 +345,7 @@ def atualizar_item_pedido(item_id: int, item: ItemPedidoCreate):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.delete("/itens-pedido/{item_id}", response_model=dict,  tags=["ItensPedidos"])
+@app.delete("/itens-pedido/{item_id}", response_model=dict, tags=["ItensPedidos"])
 def deletar_item_pedido(item_id: int):
     try:
         deleted_item = LivroCRUD.delete_itemPedido(item_id)
@@ -314,6 +354,5 @@ def deletar_item_pedido(item_id: int):
         raise HTTPException(status_code=404, detail=str(e))
 
 if __name__ == "__main__":
-    print("teste")
     import uvicorn
     uvicorn.run(app, host="localhost", port=5050)

@@ -9,6 +9,7 @@ export interface Livro {
   isbn?: string;
   preco: number;
   estoque: number;
+  genero: string;
 }
 
 export const LivroService = {

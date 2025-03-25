@@ -1,9 +1,9 @@
 // src/App.tsx
 import { Route, Routes } from 'react-router-dom';
 import Home from './pages/Home/Home';
-import Admin from './pages/Admin';
-import Books from './pages/Books';
-import Clients from './pages/Clients';
+import Admin from './pages/Admin/Admin';
+import Books from './pages/Books/Books';
+import Clients from './pages/Clients/Clients';
 import Orders from './pages/Orders';
 
 const App = () => {
