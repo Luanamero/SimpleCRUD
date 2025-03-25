@@ -20,6 +20,9 @@ const Navbar = () => {
         <Link to="/orders" className="nav-link">
           <i className="fas fa-receipt"></i> Pedidos
         </Link>
+        <Link to="/relatorios" className="nav-link">
+          <i className="fas fa-receipt"></i> Relatórios
+        </Link>
       </div>
     </nav>
   );

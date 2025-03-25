@@ -4,7 +4,7 @@ import Home from './pages/Home/Home';
 import Admin from './pages/Admin/Admin';
 import Books from './pages/Books/Books';
 import Clients from './pages/Clients/Clients';
-import Orders from './pages/Orders';
+import Orders from './pages/Orders/Orders';
 
 const App = () => {
   return (
