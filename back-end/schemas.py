@@ -58,6 +58,7 @@ class ClienteCreate(BaseModel):
     nome: str  # Nome do cliente
     email: str  # Email do cliente
     telefone: Optional[str] = None  # Telefone do cliente
+    endereco: str
 
 # Schema para retorno de um cliente
 class ClienteResponse(BaseModel):
@@ -65,6 +66,7 @@ class ClienteResponse(BaseModel):
     nome: str  # Nome do cliente
     email: str  # Email do cliente
     telefone: Optional[str] = None  # Telefone do cliente
+    endereco: str
 
     class Config:
         from_attributes = True  # Permite a conversão de objetos SQLAlchemy para Pydantic

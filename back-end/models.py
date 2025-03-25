@@ -49,6 +49,7 @@ class Cliente(Base):
     nome = Column(String(255), nullable=False)
     email = Column(String(255), nullable=False)
     telefone = Column(String(20))
+    endereco =  Column(String(255), nullable=False)
     
     # Relacionamento com Pedido
     pedidos = relationship("Pedido", back_populates="cliente", cascade="all, delete")

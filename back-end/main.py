@@ -261,11 +261,26 @@ def delete_pedido(pedido_id: int, db: Session = Depends(get_db)):
 # Endpoint para criar um cliente
 @app.post("/clientes/", response_model=ClienteResponse, tags=["Clientes"])
 def create_cliente(cliente: ClienteCreate, db: Session = Depends(get_db)):
-    db_cliente = Cliente(**cliente.dict())
-    db.add(db_cliente)
-    db.commit()
-    db.refresh(db_cliente)
-    return db_cliente
+    # Verificar se os dados do cliente são válidos (você pode adicionar validação aqui, se necessário)
+    try:
+        # Criar o cliente a partir do modelo
+        db_cliente = Cliente(**cliente.dict())
+
+        # Tentar adicionar o cliente à sessão do banco de dados
+        db.add(db_cliente)
+        db.commit()  # Tenta realizar o commit da transação
+        db.refresh(db_cliente)  # Atualiza o objeto com os dados do banco
+
+        return db_cliente  # Retorna o cliente criado
+
+    except SQLAlchemyError as e:
+        # Se ocorrer um erro relacionado ao banco de dados, reverte as alterações
+        db.rollback()  # Rollback da transação em caso de erro
+        raise HTTPException(status_code=500, detail=f"Erro no banco de dados: {str(e)}")
+
+    except Exception as e:
+        # Para outros erros que não sejam relacionados ao banco de dados
+        raise HTTPException(status_code=500, detail=f"Erro inesperado: {str(e)}")
 
 # Endpoint para listar todos os clientes
 @app.get("/clientes/", response_model=List[ClienteResponse], tags=["Clientes"])
