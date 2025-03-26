@@ -34,13 +34,13 @@ class Livro(Base):
     ano_publicacao = Column(Integer, nullable=False)
     genero = Column(String(100))
     
-    # Relacionamentos modificados
+    # Relacionamentos 
     autor = relationship("Autor", back_populates="livros")
     editora = relationship("Editora", back_populates="livros")
     itens_pedido = relationship("ItemPedido", 
                               back_populates="livro", 
                               cascade="all, delete",
-                              passive_deletes=True)  # ← SOLUÇÃO CHAVE AQUI
+                              passive_deletes=True) 
 
 class Cliente(Base):
     __tablename__ = "cliente"
