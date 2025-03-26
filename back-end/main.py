@@ -352,6 +352,45 @@ def deletar_item_pedido(item_id: int):
         return {"message": "Item de pedido deletado", "data": deleted_item}
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
+    
+@app.get("/relatorio", response_model=dict, tags=["Relatorio"])
+def gerar_relatorio():
+    try:
+        livros = LivroCRUD.get_all_livros()
+        col_names = ["id", "titulo", "autor_id", "preco", "estoque", 
+                    "editora_id", "ano_publicacao", "genero"]
+        livros_dict = transform_to_dict(livros, col_names)
+
+        editoras = LivroCRUD.get_all_editoras()
+        col_names = ["id", "nome", "endereco"]
+        editoras_dict = transform_to_dict(editoras, col_names)
+        
+        autores = LivroCRUD.get_all_autor()
+        col_names = ["id", "nome", "nacionalidade"]
+        autores_dict = transform_to_dict(autores, col_names)
+        
+        clientes = LivroCRUD.get_all_cliente()
+        col_names = ["id", "nome", "email", "endereco", "telefone"]
+        clientes_dict = transform_to_dict(clientes, col_names)
+        
+        pedidos = LivroCRUD.get_all_pedido()
+        col_names = ["id", "cliente_id", "data", "total"]
+        pedidos_dict = transform_to_dict(pedidos, col_names)
+
+        itens = LivroCRUD.get_all_itemPedido()
+        col_names = ["id", "pedido_id", "livro_id", "quantidade", "preco_unitario"]
+        itens_dict = transform_to_dict(itens, col_names)
+
+        return {"message": "Relatório gerado com sucesso", "data": {
+            "livros": livros_dict,
+            "editoras": editoras_dict,
+            "autores": autores_dict,
+            "clientes": clientes_dict,
+            "pedidos": pedidos_dict,
+            "itens_pedido": itens_dict
+        }}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
