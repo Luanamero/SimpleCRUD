@@ -76,6 +76,7 @@ class PedidoCreate(BaseModel):
     cliente_id: int  
     data: str  
     total: float  
+    status: str
 
 # Schema para retorno de um pedido
 class PedidoResponse(BaseModel):
@@ -83,6 +84,7 @@ class PedidoResponse(BaseModel):
     cliente_id: int  
     data: str  
     total: float  
+    status: str
 
     class Config:
         from_attributes = True  

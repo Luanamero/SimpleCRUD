@@ -3,7 +3,7 @@ import { api } from './api';
 export interface Pedido {
   id?: number;
   cliente_id: number;
-  data_pedido?: string;
+  data?: string;
   status: string;
   total?: number;
 }

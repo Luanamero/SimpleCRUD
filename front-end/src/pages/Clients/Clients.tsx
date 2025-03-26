@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ClienteService, Cliente } from '../../services/clientes';
-import './Clients.css'; // Import the CSS file
+import './Clients.css';
 import Navbar from '../../components/NavBar';
 
 const Clients = () => {
@@ -12,25 +12,28 @@ const Clients = () => {
     telefone: '', 
     endereco: '' 
   });
+  const [refresh, setRefresh] = useState<boolean>(false); // Estado para controlar o reload
+
+  const fetchClients = async () => {
+    try {
+      setLoading(true);
+      const clientsData = await ClienteService.listar();
+      setClients(clientsData);
+    } catch (error) {
+      console.error('Erro ao carregar os clientes:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchClients = async () => {
-      try {
-        const clientsData = await ClienteService.listar();
-        setClients(clientsData);
-      } catch (error) {
-        console.error('Erro ao carregar os clientes:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchClients();
-  }, []);
+  }, [refresh]); // Adicionamos refresh como dependência
 
   const handleDelete = async (id: number) => {
     try {
       await ClienteService.excluir(id);
-      setClients(prevClients => prevClients.filter(client => client.id !== id));
+      setRefresh(prev => !prev); // Ativa o reload
     } catch (error) {
       console.error('Erro ao excluir o cliente:', error);
     }
@@ -49,18 +52,12 @@ const Clients = () => {
   const handleSave = async () => {
     try {
       if (newClient.id) {
-        // Update client
-        const updatedClient = await ClienteService.atualizar(newClient.id, newClient);
-        setClients(prevClients =>
-          prevClients.map(client => (client.id === updatedClient.id ? updatedClient : client))
-        );
+        await ClienteService.atualizar(newClient.id, newClient);
       } else {
-        // Add new client
-        const createdClient = await ClienteService.criar(newClient);
-        setClients(prevClients => [...prevClients, createdClient]);
+        await ClienteService.criar(newClient);
       }
-      // Reset form
       setNewClient({ nome: '', email: '', telefone: '', endereco: '' });
+      setRefresh(prev => !prev); // Ativa o reload
     } catch (error) {
       console.error('Erro ao salvar o cliente:', error);
     }
@@ -68,64 +65,55 @@ const Clients = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setNewClient((prevState: any) => ({ ...prevState, [name]: value }));
+    setNewClient(prev => ({ ...prev, [name]: value }));
   };
 
   return (
-      <><Navbar /><div className="clients-container">
+    <><Navbar /><div className="clients-container">
       <h1 className="page-title">Gerenciamento de Clientes</h1>
 
-      {/* Client Form */}
       <div className="client-form">
         <h2 className="form-title">
-          {newClient.id ? 'Edit Client' : 'Add New Client'}
+          {newClient.id ? 'Editar Cliente' : 'Adicionar Novo Cliente'}
         </h2>
 
         <div className="form-grid">
           <div className="form-group">
-            <label htmlFor="nome">Nome</label>
+            <label>Nome</label>
             <input
-              id="nome"
               type="text"
               name="nome"
               className="form-control"
-              placeholder="Nome"
               value={newClient.nome}
               onChange={handleChange} />
           </div>
 
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label>Email</label>
             <input
-              id="email"
               type="email"
               name="email"
               className="form-control"
-              placeholder="Email"
               value={newClient.email}
               onChange={handleChange} />
           </div>
 
           <div className="form-group">
-            <label htmlFor="telefone">Telefone</label>
+            <label>Telefone</label>
             <input
-              id="telefone"
               type="text"
               name="telefone"
               className="form-control"
-              placeholder="Telefone"
               value={newClient.telefone}
               onChange={handleChange} />
           </div>
 
           <div className="form-group">
-            <label htmlFor="endereco">Endereço</label>
+            <label>Endereço</label>
             <input
-              id="endereco"
               type="text"
               name="endereco"
               className="form-control"
-              placeholder="Endereço"
               value={newClient.endereco}
               onChange={handleChange} />
           </div>
@@ -135,13 +123,12 @@ const Clients = () => {
           className="btn btn-primary"
           onClick={handleSave}
         >
-          {newClient.id ? 'Atualizar Cliente' : 'Adicionar Cliente'}
+          {newClient.id ? 'Atualizar' : 'Salvar'}
         </button>
 
         {newClient.id && (
           <button
-            className="btn btn-danger"
-            style={{ marginLeft: '0.5rem' }}
+            className="btn btn-secondary"
             onClick={() => setNewClient({ nome: '', email: '', telefone: '', endereco: '' })}
           >
             Cancelar
@@ -149,9 +136,8 @@ const Clients = () => {
         )}
       </div>
 
-      {/* Clients Table */}
       {loading ? (
-        <div className="loading-message">Carregando Clientes...</div>
+        <div className="loading-message">Carregando...</div>
       ) : (
         <table className="client-table">
           <thead>
@@ -170,28 +156,26 @@ const Clients = () => {
                   <td>{client.nome}</td>
                   <td>{client.email}</td>
                   <td>{client.telefone}</td>
-                  <td>{client.endereco || 'N/A'}</td>
-                  <td className="actions-cell">
+                  <td>{client.endereco || '-'}</td>
+                  <td>
                     <button
-                      className="btn btn-warning"
+                      className="btn btn-edit"
                       onClick={() => handleEdit(client)}
                     >
                       Editar
                     </button>
                     <button
-                      className="btn btn-danger"
+                      className="btn btn-delete"
                       onClick={() => client.id && handleDelete(client.id)}
                     >
-                      Deletar
+                      Excluir
                     </button>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={5} style={{ textAlign: 'center', padding: '1rem' }}>
-                  Nenhum cliente encontrado
-                </td>
+                <td colSpan={5}>Nenhum cliente cadastrado</td>
               </tr>
             )}
           </tbody>

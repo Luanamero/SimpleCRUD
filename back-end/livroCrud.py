@@ -619,18 +619,18 @@ class LivroCRUD:
 
 # ===== CRUD Pedido =======
     @staticmethod
-    def create_pedido(cliente_id, data, total):
+    def create_pedido(cliente_id, data, total, status=None):
             """Cria uma nova pedido no banco de dados"""
             conn = LivroCRUD.create_connection()
             cur = conn.cursor()
             try:
                 cur.execute(
                     """
-                    INSERT INTO pedido (cliente_id, data, total)
+                    INSERT INTO pedido (cliente_id, data, total, status)
                     VALUES (%s, %s, %s)
                     RETURNING *;
                     """,
-                    (cliente_id, data, total)
+                    (cliente_id, data, total, status)
                 )
                 new_pedido = cur.fetchone()
                 conn.commit()
@@ -693,7 +693,7 @@ class LivroCRUD:
             conn.close()
 
     @staticmethod
-    def update_pedido(pedido_id, nova_data, novo_total):
+    def update_pedido(pedido_id, nova_data, novo_total, status):
         """Atualiza os dados de um pedido no banco de dados"""
         conn = LivroCRUD.create_connection()
         cur = conn.cursor()
@@ -711,9 +711,13 @@ class LivroCRUD:
             if nova_data is not None:
                 query += "data = %s, "
                 params.append(nova_data)
+
+            if status is not None:
+                query += "status = %s, "
+                params.append(status)
             
             if novo_total is not None:
-                query += "preco_unitario = %s, "
+                query += "total = %s, "
                 params.append(novo_total)
 
             # Remove a vírgula extra no final e adiciona a condição WHERE

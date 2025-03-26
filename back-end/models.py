@@ -61,6 +61,7 @@ class Pedido(Base):
     cliente_id = Column(Integer, ForeignKey("cliente.id", ondelete="CASCADE"), nullable=False)
     data = Column(Date, nullable=False)
     total = Column(Numeric(10, 2), nullable=False)
+    status =  Column(String(255))
     
     # Relacionamentos
     cliente = relationship("Cliente", back_populates="pedidos")
