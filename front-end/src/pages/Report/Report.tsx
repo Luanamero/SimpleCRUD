@@ -74,7 +74,9 @@ export default function Report() {
     return Number.isNaN(num) ? "R$ 0,00" : num.toFixed(2);
   }, [dados, orderCounts, clientCounts]);
 
-  return (
+  return carregando ? (
+    "Carregando..."
+  ) : (
     <div
       style={{
         padding: "1.5rem",
