@@ -627,7 +627,7 @@ class LivroCRUD:
                 cur.execute(
                     """
                     INSERT INTO pedido (cliente_id, data, total, status)
-                    VALUES (%s, %s, %s)
+                    VALUES (%s, %s, %s, %s)
                     RETURNING *;
                     """,
                     (cliente_id, data, total, status)

@@ -14,10 +14,17 @@ const Pedidos = () => {
   const [carregando, setCarregando] = useState<boolean>(true);
   const [pedidoEditando, setPedidoEditando] = useState<Pedido | null>(null);
   
-  // Form states
+  // Função para formatar data para string YYYY-MM-DD
+  const formatarDataString = (date?: Date | string) => {
+    if (typeof date === 'string') return date;
+    const data = date || new Date();
+    return data.toISOString().split('T')[0];
+  };
+
+  // Form states - usando strings para datas
   const [novoPedido, setNovoPedido] = useState<Omit<Pedido, 'id'>>({
     cliente_id: 0,
-    data: new Date().toISOString().split('T')[0],
+    data: formatarDataString(), // String no formato YYYY-MM-DD
     total: 0,
     status: "Processando"
   });
@@ -65,7 +72,7 @@ const Pedidos = () => {
   const resetarFormulario = () => {
     setNovoPedido({ 
       cliente_id: 0, 
-      data: new Date().toISOString().split('T')[0],
+      data: formatarDataString(),
       total: 0,
       status: "Processando"
     });
@@ -115,27 +122,31 @@ const Pedidos = () => {
     setItensNovoPedido(novosItens);
   };
 
-  // Função segura para formatar valores monetários
-const formatarMoeda = (valor: number | undefined): string => {
-  // Converte para número (caso seja string)
-  const numero = Number(valor || 0);
-  
-  // Formata com 2 casas decimais usando Intl.NumberFormat
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(numero);
-};
+  const formatarMoeda = (valor: number | undefined): string => {
+    const numero = Number(valor || 0);
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(numero);
+  };
 
+  const formatarDataExibicao = (dataString?: string) => {
+    if (!dataString) return 'N/A';
+    try {
+      return new Date(dataString).toLocaleDateString('pt-BR');
+    } catch {
+      return dataString; // Retorna o valor original se não puder converter
+    }
+  };
   const handleIniciarEdicao = (pedido: Pedido) => {
     setPedidoEditando(pedido);
     setNovoPedido({
       cliente_id: pedido.cliente_id,
-      data: pedido.data,
+      data: formatarDataString(pedido.data),
       total: pedido.total,
-      status: pedido.status
+      status: pedido.status || "Processando" 
     });
     
     if (pedido.id && itensPedido[pedido.id]) {
@@ -154,16 +165,47 @@ const formatarMoeda = (valor: number | undefined): string => {
     resetarFormulario();
     setMostrarFormulario(false);
   };
-
+  const formatarDataParaBackend = (data: string): string => {
+    // Verifica se já está no formato correto
+    if (/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+      return data;
+    }
+    
+    // Tenta converter para Date e depois para o formato correto
+    const dateObj = new Date(data);
+    if (!isNaN(dateObj.getTime())) {
+      return dateObj.toISOString().split('T')[0];
+    }
+    
+    // Fallback: data atual
+    return new Date().toISOString().split('T')[0];
+  };
+  
   const handleSalvarPedido = async () => {
     try {
+      // Validações iniciais
+      if (!novoPedido.cliente_id) throw new Error("Selecione um cliente");
+      if (!novoPedido.data) throw new Error("Data do pedido é obrigatória");
+  
+      // Validação dos itens antes de continuar
+      const itensInvalidos = itensNovoPedido.some(item => 
+        !item.livro_id || item.quantidade <= 0 || isNaN(item.preco_unitario)
+      );
+      if (itensInvalidos) {
+        throw new Error("Verifique os itens do pedido");
+      }
+  
+      // Prepara dados do pedido
+      const dadosPedido = {
+        cliente_id: novoPedido.cliente_id,
+        data: formatarDataParaBackend(novoPedido.data),
+        total: calcularTotalPedido(itensNovoPedido),
+        status: novoPedido.status || "Processando"
+      };
+  
       if (pedidoEditando?.id) {
-        await PedidoService.atualizar(pedidoEditando.id, {
-          status: novoPedido.status,
-          data: novoPedido.data,
-          total: novoPedido.total,
-          cliente_id: novoPedido.cliente_id
-        });
+        // Atualização de pedido existente
+        await PedidoService.atualizar(pedidoEditando.id, dadosPedido);
       } else {
         const total = calcularTotalPedido(itensNovoPedido);
         const pedidoCriado = await PedidoService.criar({
@@ -173,19 +215,19 @@ const formatarMoeda = (valor: number | undefined): string => {
           status: novoPedido.status
         });
   
-        // Verificação segura + criação de itens
-        if (pedidoCriado.id) {
-          const itensParaCriar = itensNovoPedido.map(item => ({
-            livro_id: item.livro_id,
-            quantidade: item.quantidade,
-            preco_unitario: item.preco_unitario,
-            pedido_id: pedidoCriado.id // TypeScript sabe que é number aqui
-          }));
-  
-          await Promise.all(
-            itensParaCriar.map(item => ItemPedidoService.criar(item))
-          );
-        }
+        const itensParaCriar = itensNovoPedido.map(item => {
+          if (item.pedido_id === undefined) {
+            throw new Error("pedido_id não pode ser undefined");
+          }
+          return {
+            ...item,
+            pedido_id: item.pedido_id // Agora TS sabe que não é undefined
+          };
+        });
+
+        await Promise.all(
+          itensParaCriar.map(item => ItemPedidoService.criar(item))
+        );
       }
   
       await carregarDados();
@@ -198,7 +240,6 @@ const formatarMoeda = (valor: number | undefined): string => {
   const handleExcluirPedido = async (id: number) => {
     try {
       await PedidoService.excluir(id);
-      // Recarrega os dados após exclusão
       await carregarDados();
     } catch (erro) {
       console.error('Erro ao excluir pedido:', erro);
@@ -207,25 +248,16 @@ const formatarMoeda = (valor: number | undefined): string => {
 
   const handleAtualizarStatus = async (id: number, status: string) => {
     try {
-      // 1. Primeiro busca o pedido atual para obter os valores existentes
       const pedidoAtual = await PedidoService.obter(id);
-      console.log("pedido atual:",pedidoAtual)
-      
-      // 2. Atualiza enviando todos os campos obrigatórios
       await PedidoService.atualizar(id, {
-        cliente_id: pedidoAtual.cliente_id, // Mantém o valor existente
-        data: pedidoAtual.data,             // Mantém o valor existente
-        total: pedidoAtual.total,           // Mantém o valor existente
-        status: status                      // Apenas o status é alterado
+        cliente_id: pedidoAtual.cliente_id,
+        data: pedidoAtual.data,
+        total: pedidoAtual.total,
+        status: status
       });
-      
-      // 3. Recarrega os dados após atualização
       await carregarDados();
     } catch (erro) {
       console.error('Erro ao atualizar status:', erro);
-      
-      // Opcional: Mostrar feedback para o usuário
-      // alert('Não foi possível atualizar o status');
     }
   };
 
@@ -252,7 +284,6 @@ const formatarMoeda = (valor: number | undefined): string => {
           </h2>
   
           {pedidoEditando ? (
-            // Formulário de edição (apenas status)
             <div className="grid-formulario">
               <div className="grupo-formulario">
                 <label>Status</label>
@@ -272,7 +303,6 @@ const formatarMoeda = (valor: number | undefined): string => {
               </div>
             </div>
           ) : (
-            // Formulário de criação (completo)
             <>
               <div className="grid-formulario">
                 <div className="grupo-formulario">
@@ -427,10 +457,8 @@ const formatarMoeda = (valor: number | undefined): string => {
                   <tr key={pedido.id}>
                     <td>{pedido.id}</td>
                     <td>{cliente ? `${cliente.nome}` : 'Cliente não encontrado'}</td>
-                    <td>{pedido.data ? new Date(pedido.data).toLocaleDateString() : 'N/A'}</td>
-                    <td>
-                      {pedido.status}
-                    </td>
+                    <td>{formatarDataExibicao(pedido.data)}</td>
+                    <td>{pedido.status}</td>
                     <td>{formatarMoeda(pedido.total)}</td>
                     <td className="celula-acoes">
                       <div style={{ display: 'flex', gap: '0.5rem' }}>

@@ -67,6 +67,7 @@ const LivrosPage = () => {
       try {
         await LivroService.excluir(id);
         setLivros(livros.filter(livro => livro.id !== id));
+        window.location.reload()
       } catch (err) {
         setError('Falha ao excluir livro');
         console.error(err);
@@ -98,6 +99,10 @@ const LivrosPage = () => {
   
       // Atualiza o estado com o novo livro completo
       setLivros([...livros, livroCadastrado]);
+
+
+
+      window.location.reload()
   
       // Reseta o formulário
       setNovoLivro({
@@ -144,17 +149,9 @@ const LivrosPage = () => {
       };
   
       // Chama o serviço de atualização
-      const livroAtualizado = await LivroService.atualizar(livroEdicao.id, dadosAtualizacao);
+      await LivroService.atualizar(livroEdicao.id, dadosAtualizacao);
   
-      // Atualiza o estado
-      setLivros(prevLivros => 
-        prevLivros.map(livro => 
-          livro.id === livroAtualizado.id ? livroAtualizado : livro
-        )
-      );
-  
-      // Fecha o modo de edição
-      setLivroEdicao(null);
+      window.location.reload(); // Recarrega a página
   
     } catch (err) {
       setError('Falha ao editar livro');

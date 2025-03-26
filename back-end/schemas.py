@@ -1,3 +1,4 @@
+from datetime import date
 from pydantic import BaseModel
 from typing import Optional
 
@@ -74,7 +75,7 @@ class ClienteResponse(BaseModel):
 # Schema para criação de um pedido
 class PedidoCreate(BaseModel):
     cliente_id: int  
-    data: str  
+    data: date  
     total: float  
     status: str
 
@@ -82,7 +83,7 @@ class PedidoCreate(BaseModel):
 class PedidoResponse(BaseModel):
     id: int 
     cliente_id: int  
-    data: str  
+    data: date  
     total: float  
     status: str
 

@@ -257,7 +257,8 @@ def criar_pedido(pedido: PedidoCreate):
         novo_pedido = LivroCRUD.create_pedido(
             cliente_id=pedido.cliente_id,
             data=pedido.data,
-            total=pedido.total
+            total=pedido.total,
+            status=pedido.status
         )
         return {"message": "Pedido criado com sucesso", "data": novo_pedido}
     except Exception as e:
@@ -267,7 +268,7 @@ def criar_pedido(pedido: PedidoCreate):
 def listar_pedidos():
     try:
         pedidos = LivroCRUD.get_all_pedido()
-        col_names = ["id", "cliente_id", "data", "total"]
+        col_names = ["id", "cliente_id", "data", "total", "status"]
         return transform_to_dict(pedidos, col_names)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -287,7 +288,8 @@ def atualizar_pedido(pedido_id: int, pedido: PedidoCreate):
         updated_pedido = LivroCRUD.update_pedido(
             pedido_id=pedido_id,
             nova_data=pedido.data,
-            novo_total=pedido.total
+            novo_total=pedido.total,
+            status = pedido.status
         )
         return {"message": "Pedido atualizado", "data": updated_pedido}
     except Exception as e:
