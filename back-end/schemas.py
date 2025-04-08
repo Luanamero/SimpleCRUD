@@ -57,17 +57,17 @@ class AutorResponse(BaseModel):
 # Schema para criação de um cliente
 class ClienteCreate(BaseModel):
     nome: str  
-    email: str  
-    telefone: Optional[str] = None 
+    email: str   
     endereco: str
+    telefone: Optional[str] = None
 
 # Schema para retorno de um cliente
 class ClienteResponse(BaseModel):
     id: int  
     nome: str  
     email: str  
-    telefone: Optional[str] = None 
     endereco: str
+    telefone: Optional[str] = None
 
     class Config:
         from_attributes = True  

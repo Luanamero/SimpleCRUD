@@ -109,11 +109,23 @@ const Pedidos = () => {
 
   const handleItemChange = (index: number, campo: keyof ItemPedido, valor: any) => {
     const novosItens = [...itensNovoPedido];
-    novosItens[index] = { 
-      ...novosItens[index], 
-      [campo]: campo === 'quantidade' ? parseInt(valor) || 0 : valor 
+    let novoValor = campo === 'quantidade' ? parseInt(valor) || 0 : valor;
+  
+    if (campo === 'quantidade') {
+      const livroId = novosItens[index].livro_id;
+      const livroSelecionado = livros.find(l => l.id === livroId);
+  
+      if (livroSelecionado && novoValor > livroSelecionado.estoque) {
+        novoValor = livroSelecionado.estoque;
+        alert(`A quantidade excede o estoque disponível (${livroSelecionado.estoque}) do livro "${livroSelecionado.titulo}".`);
+      }
+    }
+  
+    novosItens[index] = {
+      ...novosItens[index],
+      [campo]: novoValor
     };
-
+  
     if (campo === 'livro_id') {
       const livroSelecionado = livros.find(l => l.id === Number(valor));
       novosItens[index].preco_unitario = livroSelecionado?.preco || 0;
@@ -121,6 +133,7 @@ const Pedidos = () => {
   
     setItensNovoPedido(novosItens);
   };
+  
 
   const formatarMoeda = (valor: number | undefined): string => {
     const numero = Number(valor || 0);
@@ -187,8 +200,8 @@ const Pedidos = () => {
       if (!novoPedido.cliente_id) throw new Error("Selecione um cliente");
       if (!novoPedido.data) throw new Error("Data do pedido é obrigatória");
   
-      // Validação dos itens antes de continuar
-      const itensInvalidos = itensNovoPedido.some(item => 
+      // Validação dos itens
+      const itensInvalidos = itensNovoPedido.some(item =>
         !item.livro_id || item.quantidade <= 0 || isNaN(item.preco_unitario)
       );
       if (itensInvalidos) {
@@ -204,38 +217,83 @@ const Pedidos = () => {
       };
   
       if (pedidoEditando?.id) {
-        // Atualização de pedido existente
+        // Atualiza pedido existente
         await PedidoService.atualizar(pedidoEditando.id, dadosPedido);
-      } else {
-        const total = calcularTotalPedido(itensNovoPedido);
-        const pedidoCriado = await PedidoService.criar({
-          cliente_id: novoPedido.cliente_id,
-          data: novoPedido.data,
-          total,
-          status: novoPedido.status
-        });
   
-        const itensParaCriar = itensNovoPedido.map(item => {
-          if (item.pedido_id === undefined) {
-            throw new Error("pedido_id não pode ser undefined");
+        // Atualiza ou cria itens
+        await Promise.all(itensNovoPedido.map(async (item) => {
+          if ('id' in item && item.id) {
+            if (typeof item.id === 'number') {
+              return await ItemPedidoService.atualizar(item.id, {
+                quantidade: item.quantidade,
+                preco_unitario: item.preco_unitario
+              });
+            } else {
+              throw new Error("Invalid item ID");
+            }
+          } else {
+            return await ItemPedidoService.criar({
+              pedido_id: pedidoEditando.id!,
+              livro_id: item.livro_id,
+              quantidade: item.quantidade,
+              preco_unitario: item.preco_unitario
+            });
           }
-          return {
-            ...item,
-            pedido_id: item.pedido_id // Agora TS sabe que não é undefined
+        }));
+        await carregarDados();
+      } else {
+        // Cria novo pedido
+        const resposta = await PedidoService.criar(dadosPedido);
+        console.log("resposta",resposta)
+        let pedidoCriado;
+        if (Array.isArray(resposta.data)) {
+          const [id, userId, data, valor, status] = resposta.data;
+          pedidoCriado = {
+            id,
+            userId,
+            data,
+            valor,
+            status
           };
-        });
-
-        await Promise.all(
-          itensParaCriar.map(item => ItemPedidoService.criar(item))
-        );
+        } else if (typeof resposta.data === 'object') {
+          pedidoCriado = resposta.data;
+        }
+        
+        console.log("aaa", pedidoCriado);
+        
+        if (!pedidoCriado || typeof pedidoCriado.id !== 'number') {
+          throw new Error("Erro ao criar o pedido: resposta inválida do servidor.");
+        }
+        // Cria os itens e atualiza estoque
+        await Promise.all(itensNovoPedido.map(async (item) => {
+          await ItemPedidoService.criar({
+            pedido_id: pedidoCriado.id!,
+            livro_id: item.livro_id,
+            quantidade: item.quantidade,
+            preco_unitario: item.preco_unitario
+          });
+  
+          // Atualiza o estoque do livro
+          const livro = livros.find(l => l.id === item.livro_id);
+          console.log(livro)
+          if (livro) {
+            const novoEstoque = livro.estoque - item.quantidade;
+            await LivroService.atualizar(livro.id!, { ...livro, estoque: novoEstoque });
+          }
+        }));
+  
+        await carregarDados();
+        handleCancelarEdicao();
+        resetarFormulario();
+        setMostrarFormulario(false);
       }
   
-      await carregarDados();
-      handleCancelarEdicao();
     } catch (erro) {
-      console.error('Erro ao salvar pedido:', erro);
+      console.error("Erro ao salvar pedido:", erro);
     }
   };
+  
+  
 
   const handleExcluirPedido = async (id: number) => {
     try {
@@ -356,17 +414,19 @@ const Pedidos = () => {
                     <div className="grupo-formulario">
                       <label>Livro</label>
                       <select
-                        className="controle-formulario"
-                        value={item.livro_id}
-                        onChange={(e) => handleItemChange(index, 'livro_id', parseInt(e.target.value))}
-                      >
-                        <option value="0">Selecione um livro</option>
-                        {livros.map(livro => (
-                          <option key={livro.id} value={livro.id}>
-                            {livro.titulo} ({formatarMoeda(livro.preco)})
-                          </option>
-                        ))}
-                      </select>
+                          value={item.livro_id}
+                          onChange={e => handleItemChange(index, 'livro_id', e.target.value)}
+                        >
+                          <option value={0}>Selecione um livro</option>
+                          {livros
+                            .filter(livro => livro.estoque > 0)
+                            .map((livro) => (
+                              <option key={livro.id} value={livro.id}>
+                                {livro.titulo} (Estoque: {livro.estoque})
+                              </option>
+                          ))}
+                        </select>
+
                     </div>
   
                     <div className="grupo-formulario">

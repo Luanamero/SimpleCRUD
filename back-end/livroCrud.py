@@ -380,7 +380,7 @@ class LivroCRUD:
 # ====== CRUD Cliente ======
 
     @staticmethod
-    def create_cliente(nome, email, endereco, telefone = None):
+    def create_cliente(nome, email, endereco, telefone=None):
             """Cria uma nova cliente no banco de dados"""
             conn = LivroCRUD.create_connection()
             cur = conn.cursor()
@@ -504,28 +504,28 @@ class LivroCRUD:
 # ===== CRUD itemPedido =======
 
     @staticmethod
-    def create_itemPedido(livro_id, quantidade, preco_unitario):
-            """Cria uma nova itemPedido no banco de dados"""
-            conn = LivroCRUD.create_connection()
-            cur = conn.cursor()
-            try:
-                cur.execute(
-                    """
-                    INSERT INTO itemPedido (livro_id, quantidade, preco_unitario)
-                    VALUES (%s, %s, %s)
-                    RETURNING *;
-                    """,
-                    (livro_id, quantidade, preco_unitario)
-                )
-                new_itemPedido = cur.fetchone()
-                conn.commit()
-                return new_itemPedido
-            except Exception as e:
-                conn.rollback()
-                raise Exception(f"Erro ao criar itemPedido: {str(e)}")
-            finally:
-                cur.close()
-                conn.close()
+    def create_itemPedido(pedido_id, livro_id, quantidade, preco_unitario):
+        """Cria uma nova itemPedido no banco de dados"""
+        conn = LivroCRUD.create_connection()
+        cur = conn.cursor()  # <- aqui
+        try:
+            cur.execute(
+                """
+                INSERT INTO itemPedido (pedido_id, livro_id, quantidade, preco_unitario)
+                VALUES (%s, %s, %s, %s)
+                RETURNING *;
+                """,
+                (pedido_id, livro_id, quantidade, preco_unitario)
+            )
+            new_itemPedido = cur.fetchone()  # agora será um dict
+            conn.commit()
+            return new_itemPedido
+        except Exception as e:
+            conn.rollback()
+            raise Exception(f"Erro ao criar itemPedido: {str(e)}")
+        finally:
+            cur.close()
+            conn.close()
 
     @staticmethod
     def get_all_itemPedido():

@@ -1,17 +1,19 @@
 /* ===== ORDER MANAGEMENT THEME ===== */
+/* ===== ORDER MANAGEMENT THEME (BROWN & WHITE) ===== */
 :root {
-    --primary: #7c3aed;         /* Purple (more suitable for e-commerce/orders) */
-    --primary-light: #8b5cf6;
-    --background: #f8fafc;      /* Very light gray */
-    --card-bg: #ffffff;
-    --text: #1e293b;           /* Dark slate gray */
-    --text-light: #64748b;
-    --border: #e2e8f0;
-    --success: #10b981;        /* Green */
-    --danger: #ef4444;         /* Red */
-    --warning: #f59e0b;        /* Amber */
-    --info: #3b82f6;           /* Blue for informational items */
-  }
+  --primary: #8B4513;          /* SaddleBrown */
+  --primary-light: #A0522D;    /* Sienna */
+  --background: #fdfaf6;       /* Off-white */
+  --card-bg: #ffffff;          /* Pure white */
+  --text: #3e2f1c;             /* Dark brown */
+  --text-light: #8b7355;       /* Medium-light brown */
+  --border: #e6ddd1;           /* Light beige border */
+  --success: #6b8e23;          /* OliveDrab */
+  --danger: #b22222;           /* Firebrick */
+  --warning: #d2691e;          /* Chocolate */
+  --info: #a0522d;             /* Sienna (reused for info) */
+}
+
   
   /* ===== BASE LAYOUT ===== */
   .container-gestao {

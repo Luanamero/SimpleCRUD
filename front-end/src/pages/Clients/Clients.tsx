@@ -70,7 +70,7 @@ const Clients = () => {
 
   return (
     <><Navbar /><div className="clients-container">
-      <h1 className="page-title">Gerenciamento de Clientes</h1>
+      <h1 className="page-title" color='#8B5E3C'>Gerenciamento de Clientes</h1>
 
       <div className="client-form">
         <h2 className="form-title">

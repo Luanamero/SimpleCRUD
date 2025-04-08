@@ -11,18 +11,6 @@ const Navbar = () => {
         <Link to="/admin" className="nav-link">
           <i className="fas fa-user-shield"></i> Admin
         </Link>
-        <Link to="/books" className="nav-link">
-          <i className="fas fa-book"></i> Livros
-        </Link>
-        <Link to="/clients" className="nav-link">
-          <i className="fas fa-users"></i> Clientes
-        </Link>
-        <Link to="/orders" className="nav-link">
-          <i className="fas fa-receipt"></i> Pedidos
-        </Link>
-        <Link to="/relatorios" className="nav-link">
-          <i className="fas fa-receipt"></i> Relatórios
-        </Link>
       </div>
     </nav>
   );

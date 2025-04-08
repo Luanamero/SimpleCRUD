@@ -13,7 +13,8 @@ app = FastAPI()
 origins = [
     "http://localhost:3001",  
     "http://localhost:3000",  
-    "http://127.0.0.1:3001",  
+    "http://127.0.0.1:3001", 
+    "http://localhost:3002"
 ]
 
 app.add_middleware(
@@ -214,7 +215,7 @@ def criar_cliente(cliente: ClienteCreate):
 def listar_clientes():
     try:
         clientes = LivroCRUD.get_all_cliente()
-        col_names = ["id", "nome", "email", "endereco", "telefone"]
+        col_names = ["id", "nome", "email", "telefone", "endereco"]
         return transform_to_dict(clientes, col_names)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -223,7 +224,7 @@ def listar_clientes():
 def buscar_cliente(cliente_id: int):
     try:
         cliente = LivroCRUD.get_cliente_by_id(cliente_id)
-        col_names = ["id", "nome", "email", "endereco", "telefone"]
+        col_names = ["id", "nome", "email", "telefone", "endereco"]
         return transform_to_dict(cliente, col_names)
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
