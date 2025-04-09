@@ -1,0 +1,44 @@
+.livro-item {
+    border: 1px solid #d2b48c; /* tom de marrom claro */
+    border-radius: 8px;
+    padding: 1rem;
+    width: 100%;
+    max-width: 260px;
+    background-color: #fffaf5; /* branco com leve toque quente */
+    box-shadow: 0 2px 8px rgba(139, 69, 19, 0.1); /* sombra marrom suave */
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  
+  .livro-item:hover {
+    transform: scale(1.03);
+    box-shadow: 0 4px 12px rgba(139, 69, 19, 0.15); /* sombra mais intensa no hover */
+  }
+  
+  .livro-item button {
+    margin-top: 10px;
+    padding: 0.5rem 1rem;
+    background-color: #8b4513; /* marrom escuro */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s ease;
+  }
+  
+  .livro-item button:hover {
+    background-color: #a0522d; /* marrom mais claro no hover */
+  }
+  
+  /* Container de livros com grid responsivo */
+  .books-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+    padding: 2rem 1rem;
+    justify-items: center;
+  }
+  

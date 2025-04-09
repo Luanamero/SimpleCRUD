@@ -3,55 +3,63 @@ import './CustomerProfile.css';
 import { useParams } from 'react-router-dom';
 import { Cliente, ClienteService } from '../../services/clientes';
 import { Pedido, PedidoService } from '../../services/pedidos';
+import { Livro, LivroService } from '../../services/livros';
+import FiltroLivros from '../../components/FiltroLivros/FiltroLivros';
+import LivroItem from '../../components/LivroItem/LivroItem';
 
 const CustomerProfile = () => {
     const { id } = useParams();
-console.log('ID recebido:', id); 
     const [customer, setCustomer] = useState<Cliente | null>(null);
     const [orders, setOrders] = useState<Pedido[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'profile' | 'orders'>('profile');
-   
-   console.log(id)
+    const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'livros'>('profile');
+
+    const [livros, setLivros] = useState<Livro[]>([]);
+    const [filtro, setFiltro] = useState({
+        nome: '',
+        genero: '',
+        precoMin: 0,
+        precoMax: 999999,
+        estoqueBaixo: false,
+    });
+
     useEffect(() => {
         const fetchData = async () => {
             try {
-                console.log("oi1")
-                // 1. Busca todos os clientes
                 const resCustomers = await ClienteService.listar();
-                console.log(resCustomers)
-                const allCustomers = resCustomers;
-    
-                // 2. Busca o cliente pelo email
-                const foundCustomer = allCustomers.find(
+                const foundCustomer = resCustomers.find(
                     (customer) => id && customer.id === Number(id)
                 );
 
-                console.log(foundCustomer)
-    
                 if (!foundCustomer) {
-                    console.warn("Cliente com esse email não foi encontrado.");
                     setCustomer(null);
                     setOrders([]);
                     return;
                 }
-    
-                // 3. Com o ID do cliente, busca os pedidos
+
                 const resOrders = await PedidoService.listar();
-                const allOrders = resOrders;
-    
-                setOrders(allOrders.filter(order => order.cliente_id === foundCustomer.id));
+                setOrders(resOrders.filter(order => order.cliente_id === foundCustomer.id));
                 setCustomer(foundCustomer);
+
+                const resLivros = await LivroService.listar();
+                setLivros(resLivros);
             } catch (err) {
-                console.error('Erro ao carregar dados do cliente:', err);
+                console.error('Erro ao carregar dados:', err);
             } finally {
                 setLoading(false);
             }
         };
-    
+
         fetchData();
     }, [id]);
 
+    const livrosFiltrados = livros.filter((livro) => {
+        const nomeMatch = livro.titulo.toLowerCase().includes(filtro.nome.toLowerCase());
+        const generoMatch = livro.genero.toLowerCase().includes(filtro.genero.toLowerCase());
+        const precoMatch = livro.preco >= filtro.precoMin && livro.preco <= filtro.precoMax;
+       
+        return nomeMatch && generoMatch && precoMatch;
+    });
 
     if (loading) {
         return <div className="loading">Carregando...</div>;
@@ -81,10 +89,16 @@ console.log('ID recebido:', id);
                 >
                     Meus Pedidos ({orders.length})
                 </button>
+                <button
+                    className={activeTab === 'livros' ? 'active' : ''}
+                    onClick={() => setActiveTab('livros')}
+                >
+                    Livros Disponíveis
+                </button>
             </div>
 
             <div className="profile-content">
-                {activeTab === 'profile' ? (
+                {activeTab === 'profile' && (
                     <div className="personal-info">
                         <div className="info-card">
                             <h2>Dados Pessoais</h2>
@@ -101,7 +115,6 @@ console.log('ID recebido:', id);
                                     <span className="info-label">Telefone:</span>
                                     <span className="info-value">{customer.telefone}</span>
                                 </div>
-                               
                             </div>
                         </div>
 
@@ -116,7 +129,9 @@ console.log('ID recebido:', id);
                             <button className="logout">Sair</button>
                         </div>
                     </div>
-                ) : (
+                )}
+
+                {activeTab === 'orders' && (
                     <div className="orders-list">
                         {orders.length === 0 ? (
                             <div className="no-orders">
@@ -135,13 +150,35 @@ console.log('ID recebido:', id);
                                             {order.status}
                                         </span>
                                     </div>
-
-                                   
-
-                                    
                                 </div>
                             ))
                         )}
+                    </div>
+                )}
+
+                {activeTab === 'livros' && (
+                    <div className="available-books">
+                        <h2>Livros Disponíveis</h2>
+
+                        <FiltroLivros
+                            nome={filtro.nome}
+                            genero={filtro.genero}
+                            precoMin={filtro.precoMin}
+                            precoMax={filtro.precoMax}
+                            onChange={(novoFiltro) =>
+                                setFiltro({
+                                ...novoFiltro,
+                                estoqueBaixo: novoFiltro.estoqueBaixo ?? false, // 👈 fallback
+                                })
+                            }
+                            />
+
+
+                        <div className="books-grid">
+                            {livrosFiltrados.map(livro => (
+                                <LivroItem key={livro.id} livro={livro} />
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>

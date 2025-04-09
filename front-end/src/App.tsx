@@ -2,7 +2,7 @@
 import { Route, Routes } from 'react-router-dom';
 import Home from './pages/Home/Home';
 import Admin from './pages/Admin/Admin';
-import Books from './pages/Books/Books';
+import Books from './pages/BooksAntigo/Books';
 import Clients from './pages/Clients/Clients';
 import Orders from './pages/Orders/Orders';
 import Report from './pages/Report/Report';

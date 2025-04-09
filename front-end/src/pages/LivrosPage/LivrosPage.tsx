@@ -4,6 +4,7 @@ import { AutorService } from '../../services/autores';
 import { EditoraService } from '../../services/editoras';
 import './LivrosPage.css';
 import Navbar from '../../components/NavBar';
+import FiltroLivros from '../../components/FiltroLivros/FiltroLivros';
 
 const LivrosPage = () => {
   const [error, setError] = useState<string | null>(null);
@@ -11,7 +12,7 @@ const LivrosPage = () => {
   const [autores, setAutores] = useState<Record<number, string>>({});
   const [editoras, setEditoras] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
-
+  const [livrosFiltrados, setLivrosFiltrados] = useState<Livro[]>([]);
   const [livroEdicao, setLivroEdicao] = useState<Livro | null>(null);
   const [novoLivro, setNovoLivro] = useState<Livro>({
     titulo: '',
@@ -22,6 +23,15 @@ const LivrosPage = () => {
     preco: 0,
     genero: ''
   });
+
+  const [filtros, setFiltros] = useState({
+    nome: '',
+    genero: '',
+    precoMin: 0,
+    precoMax: 999999,
+    estoqueBaixo: false, // 👈 Novo filtro
+  });
+   
 
   const carregarDados = async () => {
     try {
@@ -46,6 +56,23 @@ const LivrosPage = () => {
   useEffect(() => {
     carregarDados();
   }, []);
+
+  useEffect(() => {
+    const { nome, genero, precoMin, precoMax, estoqueBaixo } = filtros;
+  
+    const filtrados = livros.filter((livro) =>
+      livro.titulo.toLowerCase().includes(nome.toLowerCase()) &&
+      livro.genero.toLowerCase().includes(genero.toLowerCase()) &&
+      livro.preco >= precoMin &&
+      livro.preco <= precoMax &&
+      (!estoqueBaixo || livro.estoque < 5) // 👈 Aplica o filtro só se estiver marcado
+    );
+  
+    setLivrosFiltrados(filtrados);
+  }, [livros, filtros]);
+  
+  
+  
 
   const handleExcluirLivro = async (id: number) => {
     if (window.confirm('Tem certeza que deseja excluir este livro?')) {
@@ -109,27 +136,11 @@ const LivrosPage = () => {
   return (
     <div className="container">
       <Navbar />
-      <h2 className="section-title">Livros Cadastrados</h2>
 
       {loading ? (
         <p>Carregando...</p>
       ) : (
         <>
-          <ul className="lista-livros">
-          {livros.map((livro) => (
-            <li key={livro.id}>
-              <span>
-                <strong>{livro.titulo}</strong> – {autores[livro.autor_id]} – {editoras[livro.editora_id]}
-              </span>
-              <div className="botoes-livro">
-                <button onClick={() => setLivroEdicao(livro)}>Editar</button>
-                <button onClick={() => handleExcluirLivro(livro.id!)}>Excluir</button>
-              </div>
-            </li>
-          ))}
-        </ul>
-
-
           <div className="formulario">
             <h3>{livroEdicao ? 'Editar Livro' : 'Novo Livro'}</h3>
 
@@ -156,34 +167,33 @@ const LivrosPage = () => {
             />
 
             <label>
-            Estoque:
-            <input
+              Estoque:
+              <input
                 type="number"
                 placeholder="Quantidade em estoque"
                 value={livroEdicao ? livroEdicao.estoque : novoLivro.estoque}
                 onChange={(e) =>
-                livroEdicao
+                  livroEdicao
                     ? setLivroEdicao({ ...livroEdicao, estoque: Number(e.target.value) })
                     : setNovoLivro({ ...novoLivro, estoque: Number(e.target.value) })
                 }
-            />
+              />
             </label>
 
             <label>
-            Preço:
-            <input
+              Preço:
+              <input
                 type="number"
                 step="0.01"
                 placeholder="Preço em R$"
                 value={livroEdicao ? livroEdicao.preco : novoLivro.preco}
                 onChange={(e) =>
-                livroEdicao
+                  livroEdicao
                     ? setLivroEdicao({ ...livroEdicao, preco: Number(e.target.value) })
                     : setNovoLivro({ ...novoLivro, preco: Number(e.target.value) })
                 }
-            />
+              />
             </label>
-
 
             <input
               type="text"
@@ -233,12 +243,46 @@ const LivrosPage = () => {
             <button onClick={handleSalvarLivro}>
               {livroEdicao ? 'Salvar Alterações' : 'Cadastrar Livro'}
             </button>
+
             {livroEdicao && (
               <button className="btn-cancelar" onClick={() => setLivroEdicao(null)}>
                 Cancelar Edição
               </button>
             )}
           </div>
+
+                    <FiltroLivros
+            nome={filtros.nome}
+            genero={filtros.genero}
+            precoMin={filtros.precoMin}
+            precoMax={filtros.precoMax}
+            estoqueBaixo={filtros.estoqueBaixo}
+            mostrarEstoqueBaixo={true}
+            onChange={(novoFiltro) =>
+              setFiltros({
+                ...filtros,
+                ...novoFiltro,
+                estoqueBaixo: novoFiltro.estoqueBaixo ?? false, // 👈 garante boolean
+              })
+            }
+          />
+
+
+
+          <h2 className="section-title">Livros Cadastrados</h2>
+          <ul className="lista-livros">
+            {livrosFiltrados.map((livro) => (
+              <li key={livro.id}>
+                <span>
+                  <strong>{livro.titulo}</strong> – {autores[livro.autor_id]} – {editoras[livro.editora_id]} – R$ {(Number(livro.preco) || 0).toFixed(2)}
+                </span>
+                <div className="botoes-livro">
+                  <button onClick={() => setLivroEdicao(livro)}>Editar</button>
+                  <button onClick={() => handleExcluirLivro(livro.id!)}>Excluir</button>
+                </div>
+              </li>
+            ))}
+          </ul>
 
           {error && <p className="error">{error}</p>}
         </>
