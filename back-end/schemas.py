@@ -1,6 +1,21 @@
 from datetime import date
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import Optional
+
+# Authentication schemas
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str
+    user_id: int
+    name: str
+    email: EmailStr
+
+class TokenData(BaseModel):
+    user_id: Optional[int] = None
 
 # Pydantic schema for creating a Livro
 class LivroCreate(BaseModel):
@@ -60,6 +75,7 @@ class ClienteCreate(BaseModel):
     email: str   
     endereco: str
     telefone: Optional[str] = None
+    senha: str
 
 # Schema para retorno de um cliente
 class ClienteResponse(BaseModel):
@@ -106,4 +122,4 @@ class ItemPedidoResponse(BaseModel):
     preco_unitario: float  
 
     class Config:
-        from_attributes = True  
+        from_attributes = True

@@ -7,32 +7,110 @@ import Clients from './pages/Clients/Clients';
 import Orders from './pages/Orders/Orders';
 import Report from './pages/Report/Report';
 import Login from './pages/Login/Login';
-import { ClienteService } from './services/clientes';
 import CustomerProfile from './pages/Cliente/CustomerProfile';
 import LivrosPage from './pages/LivrosPage/LivrosPage'; 
 import AutoresPage from './pages/AutoresPage/AutoresPage';  
 import EditorasPage from './pages/EditorasPage/EditorasPage'; 
-// Dentro do seu componente de rotas
-<Route path="/login" element={<Login />} />
+import ProtectedRoute from './components/ProtectedRoute';
+import { AuthProvider } from './services/auth';
 
 const App = () => {
   return (
-    <div>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/admin" element={<Admin />} />
-        <Route path="/books" element={<Books />} />
-        <Route path="/clients" element={<Clients />} />
-        <Route path="/orders" element={<Orders />} />
-        <Route path="/reports" element={<Report />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/customer" element={<CustomerProfile />} />
-        <Route path="/livros" element={<LivrosPage />} />
-        <Route path="/autores" element={<AutoresPage />} />
-        <Route path="/editoras" element={<EditorasPage />} />
-        <Route path="/customer/:id" element={<CustomerProfile />} />
-      </Routes>
-    </div>
+    <AuthProvider>
+      <div>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          
+          {/* Protected customer routes */}
+          <Route 
+            path="/customer/profile" 
+            element={
+              <ProtectedRoute requiredRole="customer">
+                <CustomerProfile />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Protected admin routes */}
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute requiredRole="seller">
+                <Admin />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/books" 
+            element={
+              <ProtectedRoute requiredRole="seller">
+                <Books />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/livros" 
+            element={
+              <ProtectedRoute requiredRole="seller">
+                <LivrosPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/autores" 
+            element={
+              <ProtectedRoute requiredRole="seller">
+                <AutoresPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/editoras" 
+            element={
+              <ProtectedRoute requiredRole="seller">
+                <EditorasPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/clients" 
+            element={
+              <ProtectedRoute requiredRole="seller">
+                <Clients />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/orders" 
+            element={
+              <ProtectedRoute requiredRole="seller">
+                <Orders />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/reports" 
+            element={
+              <ProtectedRoute requiredRole="seller">
+                <Report />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Legacy route - redirect to profile page */}
+          <Route 
+            path="/customer/:id" 
+            element={
+              <ProtectedRoute requiredRole="customer">
+                <CustomerProfile />
+              </ProtectedRoute>
+            } 
+          />
+        </Routes>
+      </div>
+    </AuthProvider>
   );
 };
 

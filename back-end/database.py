@@ -1,15 +1,41 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from contextlib import contextmanager
 
-# Database URL (replace with your PostgreSQL connection string)
-DATABASE_URL = "postgresql://postgres:mZBjOkplBsJjNleAUqAbbeMXkeDzrcso@mainline.proxy.rlwy.net:46512/railway"
+# Database connection parameters
+DB_CONFIG = {
+    "host": "caboose.proxy.rlwy.net",
+    "port": "56510",
+    "database": "railway",
+    "user": "postgres",
+    "password": "OPMuEZPtCOBSIxbSGdbYDYgjcGlwQebr"
+}
 
-# Create the SQLAlchemy engine
-engine = create_engine(DATABASE_URL)
+@contextmanager
+def get_db_connection():
+    """Create a database connection as a context manager."""
+    conn = None
+    try:
+        conn = psycopg2.connect(
+            host=DB_CONFIG["host"],
+            port=DB_CONFIG["port"],
+            database=DB_CONFIG["database"],
+            user=DB_CONFIG["user"],
+            password=DB_CONFIG["password"]
+        )
+        yield conn
+    finally:
+        if conn is not None:
+            conn.close()
 
-# Create a configured "Session" class
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Base class for models
-Base = declarative_base()
+@contextmanager
+def get_db_cursor(commit=False):
+    """Create a database cursor as a context manager."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        try:
+            yield cursor
+            if commit:
+                conn.commit()
+        finally:
+            cursor.close()

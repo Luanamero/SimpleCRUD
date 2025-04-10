@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Cliente, ClienteService } from "../../services/clientes";
 import { Pedido, PedidoService } from "../../services/pedidos";
 import { Livro, LivroService } from "../../services/livros";
 import FiltroLivros from "../../components/FiltroLivros/FiltroLivros";
 import LivroItem from "../../components/LivroItem/LivroItem";
 import { CustomerProfileGlobalStyle } from "./styles";
+import { useAuth } from "../../services/auth";
 
 const CustomerProfile = () => {
-  const { id } = useParams();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [customer, setCustomer] = useState<Cliente | null>(null);
   const [orders, setOrders] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,24 +29,23 @@ const CustomerProfile = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!user || !user.id) {
+        setLoading(false);
+        return;
+      }
+
       try {
-        const resCustomers = await ClienteService.listar();
-        const foundCustomer = resCustomers.find(
-          (customer) => id && customer.id === Number(id)
-        );
+        // Get customer details
+        const customerData = await ClienteService.obter(user.id);
+        setCustomer(customerData);
 
-        if (!foundCustomer) {
-          setCustomer(null);
-          setOrders([]);
-          return;
-        }
-
+        // Get orders for this customer
         const resOrders = await PedidoService.listar();
         setOrders(
-          resOrders.filter((order) => order.cliente_id === foundCustomer.id)
+          resOrders.filter((order) => order.cliente_id === user.id)
         );
-        setCustomer(foundCustomer);
 
+        // Get available books
         const resLivros = await LivroService.listar();
         setLivros(resLivros);
       } catch (err) {
@@ -55,20 +56,25 @@ const CustomerProfile = () => {
     };
 
     fetchData();
-  }, [id]);
+  }, [user]);
 
   const livrosFiltrados = livros.filter((livro) => {
     const nomeMatch = livro.titulo
       .toLowerCase()
       .includes(filtro.nome.toLowerCase());
     const generoMatch = livro.genero
-      .toLowerCase()
-      .includes(filtro.genero.toLowerCase());
+      ? livro.genero.toLowerCase().includes(filtro.genero.toLowerCase())
+      : !filtro.genero;
     const precoMatch =
       livro.preco >= filtro.precoMin && livro.preco <= filtro.precoMax;
 
     return nomeMatch && generoMatch && precoMatch;
   });
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   if (loading) {
     return <div className="loading">Carregando...</div>;
@@ -136,7 +142,7 @@ const CustomerProfile = () => {
 
             <div className="actions">
               <button className="change-password">Alterar Senha</button>
-              <button className="logout">Sair</button>
+              <button className="logout" onClick={handleLogout}>Sair</button>
             </div>
           </div>
         )}
@@ -146,7 +152,12 @@ const CustomerProfile = () => {
             {orders.length === 0 ? (
               <div className="no-orders">
                 <p>Você ainda não fez nenhum pedido.</p>
-                <button className="browse-books">Explorar Livros</button>
+                <button 
+                  className="browse-books"
+                  onClick={() => setActiveTab("livros")}
+                >
+                  Explorar Livros
+                </button>
               </div>
             ) : (
               orders.map((order) => (
@@ -182,7 +193,7 @@ const CustomerProfile = () => {
               onChange={(novoFiltro) =>
                 setFiltro({
                   ...novoFiltro,
-                  estoqueBaixo: novoFiltro.estoqueBaixo ?? false, // 👈 fallback
+                  estoqueBaixo: novoFiltro.estoqueBaixo ?? false,
                 })
               }
             />

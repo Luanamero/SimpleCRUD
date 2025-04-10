@@ -23,10 +23,15 @@
   text-shadow: 0 0 6px rgba(255, 248, 240, 0.2);
 }
 
+.logo-link {
+  text-decoration: none;
+}
+
 /* Container dos links */
 .navbar-links {
   display: flex;
   gap: 1.5rem;
+  align-items: center;
 }
 
 /* Estilo dos links */
@@ -75,6 +80,22 @@
   font-weight: 600;
 }
 
+/* Botão de logout */
+.logout-btn {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  color: #f5f5f5;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+  background: rgba(180, 83, 60, 0.5); /* tom avermelhado para logout */
+  border-color: rgba(180, 83, 60, 0.8);
+}
+
 /* Responsividade */
 @media (max-width: 768px) {
   .navbar-container {
@@ -87,6 +108,7 @@
     width: 100%;
     justify-content: space-around;
     gap: 0.5rem;
+    flex-wrap: wrap;
   }
 
   .nav-link {

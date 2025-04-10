@@ -380,18 +380,20 @@ class LivroCRUD:
 # ====== CRUD Cliente ======
 
     @staticmethod
-    def create_cliente(nome, email, endereco, telefone=None):
+    def create_cliente(nome, email, endereco, telefone=None, senha=None):
             """Cria uma nova cliente no banco de dados"""
+            from auth import get_password_hash
             conn = LivroCRUD.create_connection()
             cur = conn.cursor()
             try:
+                hashed_password = get_password_hash(senha) if senha else None
                 cur.execute(
                     """
-                    INSERT INTO cliente (nome, email, endereco, telefone)
-                    VALUES (%s, %s, %s, %s)
+                    INSERT INTO cliente (nome, email, endereco, telefone, senha)
+                    VALUES (%s, %s, %s, %s, %s)
                     RETURNING *;
                     """,
-                    (nome, email, endereco, telefone)
+                    (nome, email, endereco, telefone, hashed_password)
                 )
                 new_cliente = cur.fetchone()
                 conn.commit()

@@ -50,7 +50,7 @@ class Cliente(Base):
     email = Column(String(255), nullable=False)
     endereco =  Column(String(255), nullable=False)
     telefone = Column(String(20))
-
+    senha = Column(String(255))  # Added password field
     
     # Relacionamento com Pedido
     pedidos = relationship("Pedido", back_populates="cliente", cascade="all, delete")

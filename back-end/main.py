@@ -1,5 +1,5 @@
-from fastapi import FastAPI, HTTPException
-from typing import List
+from fastapi import FastAPI, HTTPException, Depends, status, Cookie, Response, Request
+from typing import List, Optional
 from livroCrud import LivroCRUD
 from schemas import (
     LivroCreate,
@@ -8,9 +8,19 @@ from schemas import (
     ItemPedidoCreate,
     PedidoCreate,
     EditoraCreate,
+    LoginRequest,
+    LoginResponse,
 )
-from models import Livro
 from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime, timedelta
+from auth import (
+    authenticate_user,
+    create_access_token,
+    get_current_user,
+    get_current_user_from_cookie,
+    AuthMiddleware,
+)
+from fastapi.security import OAuth2PasswordRequestForm
 
 app = FastAPI()
 
@@ -29,6 +39,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add authentication middleware
+app.add_middleware(AuthMiddleware)
 
 
 # Função auxiliar para transformação de dados
@@ -240,8 +253,11 @@ def criar_cliente(cliente: ClienteCreate):
             email=cliente.email,
             endereco=cliente.endereco,
             telefone=cliente.telefone,
+            senha=cliente.senha,
         )
-        return {"message": "Cliente criado com sucesso", "data": novo_cliente}
+        col_names = ["id", "nome", "email", "telefone", "endereco"]
+        cliente_dict = dict(zip(col_names, novo_cliente))
+        return {"message": "Cliente criado com sucesso", "data": cliente_dict}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -454,6 +470,50 @@ def gerar_relatorio():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/login", response_model=LoginResponse, tags=["Auth"])
+def login(
+    response: Response,
+    form_data: LoginRequest,
+):
+    user = authenticate_user(form_data.email, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=30)
+    access_token = create_access_token(
+        data={"sub": str(user["id"])}, expires_delta=access_token_expires
+    )
+    response.set_cookie(
+        key="access_token", value=f"Bearer {access_token}", httponly=True
+    )
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user_id": user["id"],
+        "name": user["nome"],
+        "email": user["email"],
+    }
+
+
+# Protected route example
+@app.get("/me", tags=["Auth"])
+async def read_users_me(current_user=Depends(get_current_user_from_cookie)):
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"
+        )
+    return {
+        "id": current_user["id"],
+        "nome": current_user["nome"],
+        "email": current_user["email"],
+    }
+
 
 if __name__ == "__main__":
     import uvicorn
