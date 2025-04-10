@@ -1,17 +1,34 @@
-import { useEffect, useState } from 'react';
-import { Livro, LivroService } from '../../services/livros';
-import { AutorService } from '../../services/autores';
-import { EditoraService } from '../../services/editoras';
+import { useState, useMemo } from 'react';
+import { Livro } from '../../services/livros';
 import Navbar from '../../components/NavBar';
 import FiltroLivros from '../../components/FiltroLivros/FiltroLivros';
 import { LivrosGlobalStyle } from './styles';
+import { useLivros, useCreateLivro, useUpdateLivro, useDeleteLivro } from '../../services/livros';
+import { useAutores } from '../../services/autores';
+import { useEditoras } from '../../services/editoras';
 
 const LivrosPage = () => {
   const [error, setError] = useState<string | null>(null);
-  const [livros, setLivros] = useState<Livro[]>([]);
-  const [autores, setAutores] = useState<Record<number, string>>({});
-  const [editoras, setEditoras] = useState<Record<number, string>>({});
-  const [loading, setLoading] = useState(true);
+  
+  // Use React Query hooks
+  const { data: livros = [], isLoading: livrosLoading } = useLivros();
+  const { data: autoresData = [], isLoading: autoresLoading } = useAutores();
+  const { data: editorasData = [], isLoading: editorasLoading } = useEditoras();
+  
+  // Set up mutations
+  const createLivroMutation = useCreateLivro();
+  const updateLivroMutation = useUpdateLivro();
+  const deleteLivroMutation = useDeleteLivro();
+
+  // Computed values for dropdown options
+  const autores = useMemo(() => {
+    return Object.fromEntries(autoresData.map(a => [a.id!, a.nome]));
+  }, [autoresData]);
+
+  const editoras = useMemo(() => {
+    return Object.fromEntries(editorasData.map(e => [e.id!, e.nome]));
+  }, [editorasData]);
+
   const [livrosFiltrados, setLivrosFiltrados] = useState<Livro[]>([]);
   const [livroEdicao, setLivroEdicao] = useState<Livro | null>(null);
   const [novoLivro, setNovoLivro] = useState<Livro>({
@@ -29,55 +46,28 @@ const LivrosPage = () => {
     genero: '',
     precoMin: 0,
     precoMax: 999999,
-    estoqueBaixo: false, // 👈 Novo filtro
+    estoqueBaixo: false,
   });
-   
-  const carregarDados = async () => {
-    try {
-      setLoading(true);
-      const [livrosRes, autoresRes, editorasRes] = await Promise.all([
-        LivroService.listar(),
-        AutorService.listar(),
-        EditoraService.listar()
-      ]);
-
-      setLivros(livrosRes);
-      setAutores(Object.fromEntries(autoresRes.map(a => [a.id!, a.nome])));
-      setEditoras(Object.fromEntries(editorasRes.map(e => [e.id!, e.nome])));
-    } catch (err) {
-      setError('Falha ao carregar dados');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    carregarDados();
-  }, []);
-
-  useEffect(() => {
+  
+  // Filter livros whenever data or filtros changes
+  useMemo(() => {
     const { nome, genero, precoMin, precoMax, estoqueBaixo } = filtros;
   
     const filtrados = livros.filter((livro) =>
       livro.titulo.toLowerCase().includes(nome.toLowerCase()) &&
-      livro.genero.toLowerCase().includes(genero.toLowerCase()) &&
+      (livro.genero || '').toLowerCase().includes(genero.toLowerCase()) &&
       livro.preco >= precoMin &&
       livro.preco <= precoMax &&
-      (!estoqueBaixo || livro.estoque < 5) // 👈 Aplica o filtro só se estiver marcado
+      (!estoqueBaixo || livro.estoque < 5)
     );
   
     setLivrosFiltrados(filtrados);
   }, [livros, filtros]);
   
-  
-  
-
   const handleExcluirLivro = async (id: number) => {
     if (window.confirm('Tem certeza que deseja excluir este livro?')) {
       try {
-        await LivroService.excluir(id);
-        setLivros(livros.filter(l => l.id !== id));
+        await deleteLivroMutation.mutateAsync(id);
       } catch (err) {
         setError('Falha ao excluir livro');
         console.error(err);
@@ -108,10 +98,12 @@ const LivrosPage = () => {
       };
 
       if (livroEdicao) {
-        await LivroService.atualizar(livroEdicao.id!, dados);
+        await updateLivroMutation.mutateAsync({ 
+          id: livroEdicao.id!, 
+          livro: dados 
+        });
       } else {
-        const novo = await LivroService.criar(dados);
-        setLivros([...livros, novo]);
+        await createLivroMutation.mutateAsync(dados);
       }
 
       setLivroEdicao(null);
@@ -124,13 +116,14 @@ const LivrosPage = () => {
         preco: 0,
         genero: ''
       });
-
-      carregarDados();
     } catch (err) {
       setError('Erro ao salvar o livro');
       console.error(err);
     }
   };
+
+  // Check if any data is still loading
+  const loading = livrosLoading || autoresLoading || editorasLoading;
 
   return (
     <div className="container">
@@ -240,7 +233,10 @@ const LivrosPage = () => {
               ))}
             </select>
 
-            <button onClick={handleSalvarLivro}>
+            <button 
+              onClick={handleSalvarLivro}
+              disabled={createLivroMutation.isPending || updateLivroMutation.isPending}
+            >
               {livroEdicao ? 'Salvar Alterações' : 'Cadastrar Livro'}
             </button>
 
@@ -251,7 +247,7 @@ const LivrosPage = () => {
             )}
           </div>
 
-                    <FiltroLivros
+          <FiltroLivros
             nome={filtros.nome}
             genero={filtros.genero}
             precoMin={filtros.precoMin}
@@ -262,12 +258,10 @@ const LivrosPage = () => {
               setFiltros({
                 ...filtros,
                 ...novoFiltro,
-                estoqueBaixo: novoFiltro.estoqueBaixo ?? false, // 👈 garante boolean
+                estoqueBaixo: novoFiltro.estoqueBaixo ?? false,
               })
             }
           />
-
-
 
           <h2 className="section-title">Livros Cadastrados</h2>
           <ul className="lista-livros">
@@ -278,7 +272,12 @@ const LivrosPage = () => {
                 </span>
                 <div className="botoes-livro">
                   <button onClick={() => setLivroEdicao(livro)}>Editar</button>
-                  <button onClick={() => handleExcluirLivro(livro.id!)}>Excluir</button>
+                  <button 
+                    onClick={() => handleExcluirLivro(livro.id!)}
+                    disabled={deleteLivroMutation.isPending}
+                  >
+                    Excluir
+                  </button>
                 </div>
               </li>
             ))}

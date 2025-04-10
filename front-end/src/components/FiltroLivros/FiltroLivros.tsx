@@ -1,21 +1,20 @@
-import React from 'react';
+import React from "react";
 
 interface FiltroProps {
+  nome: string;
+  genero: string;
+  precoMin: number;
+  precoMax: number;
+  estoqueBaixo?: boolean; // 👈 torna opcional
+  mostrarEstoqueBaixo?: boolean; // 👈 novo prop para controlar visibilidade
+  onChange: (filtro: {
     nome: string;
     genero: string;
     precoMin: number;
     precoMax: number;
-    estoqueBaixo?: boolean; // 👈 torna opcional
-    mostrarEstoqueBaixo?: boolean; // 👈 novo prop para controlar visibilidade
-    onChange: (filtro: {
-      nome: string;
-      genero: string;
-      precoMin: number;
-      precoMax: number;
-      estoqueBaixo?: boolean;
-    }) => void;
-  }
-  
+    estoqueBaixo?: boolean;
+  }) => void;
+}
 
 const FiltroLivros: React.FC<FiltroProps> = ({
   nome,
@@ -28,8 +27,7 @@ const FiltroLivros: React.FC<FiltroProps> = ({
 }) => {
   return (
     <div className="filtros-container">
-      <h4>Filtros</h4>
-
+      <div style={{ marginTop: "1rem", marginBottom: "0.25rem" }}>Filtros</div>
       <input
         type="text"
         placeholder="Filtrar por nome"
@@ -90,25 +88,24 @@ const FiltroLivros: React.FC<FiltroProps> = ({
         }
       />
 
-        {mostrarEstoqueBaixo && (
+      {mostrarEstoqueBaixo && (
         <label>
-            <input
+          <input
             type="checkbox"
             checked={estoqueBaixo ?? false}
             onChange={(e) =>
-                onChange({
+              onChange({
                 nome,
                 genero,
                 precoMin,
                 precoMax,
                 estoqueBaixo: e.target.checked,
-                })
+              })
             }
-            />
-            Estoque baixo
+          />
+          Estoque baixo
         </label>
-        )}
-
+      )}
     </div>
   );
 };

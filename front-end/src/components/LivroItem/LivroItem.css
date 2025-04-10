@@ -3,7 +3,7 @@
     border-radius: 8px;
     padding: 1rem;
     width: 100%;
-    max-width: 260px;
+    box-sizing: border-box;
     background-color: #fffaf5; /* branco com leve toque quente */
     box-shadow: 0 2px 8px rgba(139, 69, 19, 0.1); /* sombra marrom suave */
     transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -37,8 +37,8 @@
   .books-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 1.5rem;
-    padding: 2rem 1rem;
+    gap: 1rem;
+    padding: 2rem 0;
     justify-items: center;
   }
   

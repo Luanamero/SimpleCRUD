@@ -1,71 +1,66 @@
-import { useEffect, useState } from 'react';
-import { AutorService } from '../../services/autores';
-import { Livro, LivroService } from '../../services/livros';
-import { EditoraService } from '../../services/editoras';
-import Navbar from '../../components/NavBar';
-import { AutoresGlobalStyle } from './styles';
+import { useState } from "react";
+import {
+  useAutores,
+  useCreateAutor,
+  useDeleteAutor,
+} from "../../services/autores";
+import Navbar from "../../components/NavBar";
+import { AutoresGlobalStyle } from "./styles";
 
 const AutoresPage = () => {
-  const [autores, setAutores] = useState<Record<number, string>>({});
-  const [editoras, setEditoras] = useState<Record<number, string>>({});
-  const [livros, setLivros] = useState<Livro[]>([]);
-  const [novoAutor, setNovoAutor] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [novoAutor, setNovoAutor] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const carregarDados = async () => {
-    try {
-      setLoading(true);
-      const [livrosRes, autoresRes, editorasRes] = await Promise.all([
-        LivroService.listar(),
-        AutorService.listar(),
-        EditoraService.listar()
-      ]);
-
-      setLivros(livrosRes);
-      setAutores(Object.fromEntries(autoresRes.map(a => [a.id!, a.nome])));
-      setEditoras(Object.fromEntries(editorasRes.map(e => [e.id!, e.nome])));
-      setError(null);
-    } catch (err) {
-      setError('Falha ao carregar dados');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    carregarDados();
-  }, []);
+  // Use React Query hooks
+  const {
+    data: autoresData = [],
+    isLoading,
+    isError,
+    error: queryError,
+  } = useAutores();
+  const createAutorMutation = useCreateAutor();
+  const deleteAutorMutation = useDeleteAutor();
 
   const handleCadastrarAutor = async () => {
     if (!novoAutor.trim()) {
-      setError('Nome do autor não pode ser vazio');
+      setError("Nome do autor não pode ser vazio");
       return;
     }
+    setError(null); // Clear previous errors
 
     try {
-      const autorCadastrado = await AutorService.criar({ nome: novoAutor });
-      setAutores({ ...autores, [autorCadastrado.id!]: autorCadastrado.nome });
-      setNovoAutor('');
-      await carregarDados();
+      await createAutorMutation.mutateAsync({ nome: novoAutor });
+      setNovoAutor(""); // Clear input on success
     } catch (err) {
-      setError('Falha ao cadastrar autor');
+      setError("Falha ao cadastrar autor");
       console.error(err);
     }
   };
 
   const handleExcluirAutor = async (id: number) => {
-    if (window.confirm('Tem certeza que deseja excluir este autor?')) {
+    if (
+      window.confirm(
+        "Tem certeza que deseja excluir este autor? Os livros associados também podem ser afetados."
+      )
+    ) {
+      setError(null); // Clear previous errors
       try {
-        await AutorService.excluir(id);
-        await carregarDados();
+        await deleteAutorMutation.mutateAsync(id);
       } catch (err) {
-        setError('Falha ao excluir autor');
+        setError(
+          "Falha ao excluir autor. Verifique se ele não está associado a livros."
+        );
         console.error(err);
       }
     }
   };
+
+  // Combine query error and mutation error states
+  const displayError =
+    error ||
+    (isError
+      ? (queryError as Error)?.message || "Falha ao carregar autores"
+      : null);
 
   return (
     <div className="autores-container">
@@ -76,7 +71,7 @@ const AutoresPage = () => {
           <i className="fas fa-user-edit"></i> Gerenciar Autores
         </h2>
 
-        {error && <div className="error-message">{error}</div>}
+        {displayError && <div className="error-message">{displayError}</div>}
 
         <div className="form-group">
           <input
@@ -85,27 +80,56 @@ const AutoresPage = () => {
             onChange={(e) => setNovoAutor(e.target.value)}
             placeholder="Nome do autor"
             className="form-input"
+            disabled={createAutorMutation.isPending}
           />
-          <button onClick={handleCadastrarAutor} className="add-button">
-            <i className="fas fa-plus"></i> Adicionar Autor
+          <button
+            onClick={handleCadastrarAutor}
+            className="add-button"
+            disabled={createAutorMutation.isPending}
+          >
+            {createAutorMutation.isPending ? (
+              <>
+                <i className="fas fa-spinner fa-spin"></i> Adicionando...
+              </>
+            ) : (
+              <>
+                <i className="fas fa-plus"></i> Adicionar Autor
+              </>
+            )}
           </button>
         </div>
 
         <div className="list-section">
           <h3 className="list-title">Autores Cadastrados</h3>
-          <ul className="author-list">
-            {Object.entries(autores).map(([id, nome]) => (
-              <li key={id} className="author-item">
-                <span>{nome}</span>
-                <button
-                  onClick={() => handleExcluirAutor(Number(id))}
-                  className="delete-button"
-                >
-                  <i className="fas fa-trash"></i>
-                </button>
-              </li>
-            ))}
-          </ul>
+          {isLoading ? (
+            <p>Carregando autores...</p>
+          ) : (
+            <ul className="author-list">
+              {autoresData.map((autor) => (
+                <li key={autor.id} className="author-item">
+                  <span>{autor.nome}</span>
+                  <button
+                    onClick={() => handleExcluirAutor(autor.id!)}
+                    className="delete-button"
+                    disabled={
+                      deleteAutorMutation.isPending &&
+                      deleteAutorMutation.variables === autor.id
+                    }
+                  >
+                    {deleteAutorMutation.isPending &&
+                    deleteAutorMutation.variables === autor.id ? (
+                      <i className="fas fa-spinner fa-spin"></i>
+                    ) : (
+                      <i className="fas fa-trash"></i>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {!isLoading && autoresData.length === 0 && (
+            <p>Nenhum autor cadastrado.</p>
+          )}
         </div>
       </div>
     </div>

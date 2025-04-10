@@ -328,4 +328,18 @@ export const CustomerProfileGlobalStyle = createGlobalStyle`
         font-size: 2rem;
     }
 }
+
+.filtros-container input {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #d7ccc8; /* Marrom claro */
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border 0.3s ease;
+  background-color: white;
+  margin-right: 0.25rem;
+}
+
+.available-books {
+    padding: 0 1rem;
+}
 `;
