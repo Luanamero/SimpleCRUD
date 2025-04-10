@@ -1,3 +1,6 @@
+import { createGlobalStyle } from "styled-components";
+
+export const EditorasGlobalStyle = createGlobalStyle`
 .container {
   max-width: 960px;
   margin: 2rem auto;
@@ -32,8 +35,6 @@ button {
   cursor: pointer;
   font-size: 1rem;
   transition: background-color 0.3s ease;
-  margin-top: 0.5rem;
-  margin-right: 0.5rem;
 }
 
 .secondary-button {
@@ -53,3 +54,4 @@ button:hover {
   margin-top: 0.5rem;
   font-weight: bold;
 }
+`;

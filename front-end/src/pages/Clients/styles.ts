@@ -1,3 +1,6 @@
+import { createGlobalStyle } from "styled-components";
+
+export const ClientsGlobalStyles = createGlobalStyle`
 /* ===== CLIENT MANAGEMENT THEME ===== */
 :root {
   --primary: #8B5E3C;         /* Rich brown */
@@ -187,3 +190,4 @@
     flex-direction: column;
   }
 }
+`;

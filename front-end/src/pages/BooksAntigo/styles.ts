@@ -1,3 +1,6 @@
+import { createGlobalStyle } from "styled-components";
+
+export const BooksGlobalStyle = createGlobalStyle`
 /* Cores e variáveis */
 :root {
     --primary: #7b2cbf;
@@ -259,3 +262,4 @@
   .secondary-button:hover {
     background: #2d3748;
   }
+`;

@@ -1,3 +1,6 @@
+import { createGlobalStyle } from "styled-components";
+
+export const AutoresGlobalStyle = createGlobalStyle`
 .autores-container {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: #fff9f3;
@@ -109,3 +112,4 @@
     width: 100%;
   }
 }
+`;

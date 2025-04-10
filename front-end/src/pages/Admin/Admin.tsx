@@ -1,5 +1,5 @@
-import { useNavigate } from 'react-router-dom';
-import './Admin.css';
+import { useNavigate } from "react-router-dom";
+import { AdminGlobalStyle } from "./styles";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -8,63 +8,64 @@ const Admin = () => {
     navigate(path);
   };
 
-
-    const adminCards = [
-      {
-        title: "Gerenciamento de Livros",
-        description: "Gerencie seu catálogo de livros",
-        icon: "fas fa-book",
-        path: "/livros",
-        color: "linear-gradient(135deg, #8B4513 0%, #A0522D 100%)" // SaddleBrown para Sienna
-      },
-      {
-        title: "Gerenciamento de Autores",
-        description: "Adicione, edite e remova autores",
-        icon: "fas fa-feather-alt",
-        path: "/autores",
-        color: "linear-gradient(135deg, #A0522D 0%, #CD853F 100%)" // Sienna para Peru
-      },
-      {
-        title: "Gerenciamento de Editoras",
-        description: "Administre editoras do catálogo",
-        icon: "fas fa-building",
-        path: "/editoras",
-        color: "linear-gradient(135deg, #D2B48C 0%, #BC8F8F 100%)" // Tan para RosyBrown
-      },
-      {
-        title: "Gerenciamento de Clientes",
-        description: "Gerencie seus clientes",
-        icon: "fas fa-users",
-        path: "/clients",
-        color: "linear-gradient(135deg, #5C4033 0%, #8B5E3C 100%)" // Dark brown to medium brown
-      },
-      {
-        title: "Gerenciamento de Pedidos",
-        description: "Gerencie pedidos e vendas",
-        icon: "fas fa-receipt",
-        path: "/orders",
-        color: "linear-gradient(135deg, #DEB887 0%, #F5DEB3 100%)" // BurlyWood to Wheat
-      },
-      {
-        title: "Relatórios",
-        description: "Acesse relatórios e estatísticas",
-        icon: "fas fa-chart-bar",
-        path: "/reports",
-        color: "linear-gradient(135deg, #FFF8F0 0%, #DCC5B1 100%)" // branco puxado para bege claro
-      }
-    ];
-    
- 
+  const adminCards = [
+    {
+      title: "Gerenciamento de Livros",
+      description: "Gerencie seu catálogo de livros",
+      icon: "fas fa-book",
+      path: "/livros",
+      color: "linear-gradient(135deg, #8B4513 0%, #A0522D 100%)", // SaddleBrown para Sienna
+    },
+    {
+      title: "Gerenciamento de Autores",
+      description: "Adicione, edite e remova autores",
+      icon: "fas fa-feather-alt",
+      path: "/autores",
+      color: "linear-gradient(135deg, #A0522D 0%, #CD853F 100%)", // Sienna para Peru
+    },
+    {
+      title: "Gerenciamento de Editoras",
+      description: "Administre editoras do catálogo",
+      icon: "fas fa-building",
+      path: "/editoras",
+      color: "linear-gradient(135deg, #D2B48C 0%, #BC8F8F 100%)", // Tan para RosyBrown
+    },
+    {
+      title: "Gerenciamento de Clientes",
+      description: "Gerencie seus clientes",
+      icon: "fas fa-users",
+      path: "/clients",
+      color: "linear-gradient(135deg, #5C4033 0%, #8B5E3C 100%)", // Dark brown to medium brown
+    },
+    {
+      title: "Gerenciamento de Pedidos",
+      description: "Gerencie pedidos e vendas",
+      icon: "fas fa-receipt",
+      path: "/orders",
+      color: "linear-gradient(135deg, #DEB887 0%, #F5DEB3 100%)", // BurlyWood to Wheat
+    },
+    {
+      title: "Relatórios",
+      description: "Acesse relatórios e estatísticas",
+      icon: "fas fa-chart-bar",
+      path: "/reports",
+      color: "linear-gradient(135deg, #FFF8F0 0%, #DCC5B1 100%)", // branco puxado para bege claro
+    },
+  ];
 
   return (
     <div className="admin-container">
+      <AdminGlobalStyle />
       <div className="admin-content">
         <h1 className="admin-title">Painel Administrativo</h1>
-        <p className="admin-subtitle">Bem-vindo ao painel de administração. Utilize os cartões abaixo para gerenciar diferentes seções.</p>
-        
+        <p className="admin-subtitle">
+          Bem-vindo ao painel de administração. Utilize os cartões abaixo para
+          gerenciar diferentes seções.
+        </p>
+
         <div className="admin-grid">
           {adminCards.map((card, index) => (
-            <div 
+            <div
               key={index}
               className="admin-card"
               onClick={() => navigateTo(card.path)}

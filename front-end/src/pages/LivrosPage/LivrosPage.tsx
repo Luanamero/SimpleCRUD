@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { Livro, LivroService } from '../../services/livros';
 import { AutorService } from '../../services/autores';
 import { EditoraService } from '../../services/editoras';
-import './LivrosPage.css';
 import Navbar from '../../components/NavBar';
 import FiltroLivros from '../../components/FiltroLivros/FiltroLivros';
+import { LivrosGlobalStyle } from './styles';
 
 const LivrosPage = () => {
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +32,6 @@ const LivrosPage = () => {
     estoqueBaixo: false, // 👈 Novo filtro
   });
    
-
   const carregarDados = async () => {
     try {
       setLoading(true);
@@ -135,6 +134,7 @@ const LivrosPage = () => {
 
   return (
     <div className="container">
+      <LivrosGlobalStyle />
       <Navbar />
 
       {loading ? (

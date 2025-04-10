@@ -3,7 +3,7 @@ import { AutorService } from '../../services/autores';
 import { Livro, LivroService } from '../../services/livros';
 import { EditoraService } from '../../services/editoras';
 import Navbar from '../../components/NavBar';
-import './AutoresPage.css';
+import { AutoresGlobalStyle } from './styles';
 
 const AutoresPage = () => {
   const [autores, setAutores] = useState<Record<number, string>>({});
@@ -69,6 +69,7 @@ const AutoresPage = () => {
 
   return (
     <div className="autores-container">
+      <AutoresGlobalStyle />
       <Navbar />
       <div className="autores-section">
         <h2 className="section-title">

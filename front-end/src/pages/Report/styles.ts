@@ -1,3 +1,6 @@
+import { createGlobalStyle } from "styled-components";
+
+export const ReportGlobalStyles = createGlobalStyle`
 * {
   font-family: sans-serif;
 }
@@ -25,3 +28,4 @@ h2 {
     padding: 0;
     color: #202020;
 }
+`;

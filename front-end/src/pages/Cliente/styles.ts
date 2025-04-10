@@ -1,3 +1,6 @@
+import { createGlobalStyle } from "styled-components";
+
+export const CustomerProfileGlobalStyle = createGlobalStyle`
 .customer-profile-container {
     max-width: 1200px;
     margin: 0 auto;
@@ -325,3 +328,4 @@
         font-size: 2rem;
     }
 }
+`;

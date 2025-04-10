@@ -1,3 +1,6 @@
+import { createGlobalStyle } from "styled-components";
+
+export const HomeGlobalStyles = createGlobalStyle`
 .home-container {
     background-color: #f9f5f0; /* Bege claro */
     min-height: 100vh;
@@ -121,3 +124,4 @@
         margin: 0.5rem 0;
     }
 }
+`;

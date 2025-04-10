@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Relatorio, RelatorioService } from "../../services/relatorio";
 import { sumBy } from "lodash";
-import "./Report.css";
+import { ReportGlobalStyles } from "./styles";
 
 export default function Report() {
   const [carregando, setCarregando] = useState<boolean>(true);
@@ -87,6 +87,7 @@ export default function Report() {
         gap: "1rem",
       }}
     >
+      <ReportGlobalStyles />
       <h1 style={{ color: "var(--primary)" }}>Relatório da biblioteca</h1>
       <div
         className="container"

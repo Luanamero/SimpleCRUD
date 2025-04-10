@@ -1,3 +1,6 @@
+import { createGlobalStyle } from "styled-components";
+
+export const OrdersGlobalStyles = createGlobalStyle`
 /* ===== ORDER MANAGEMENT THEME ===== */
 /* ===== ORDER MANAGEMENT THEME (BROWN & WHITE) ===== */
 :root {
@@ -307,3 +310,4 @@
   .lista-itens li {
     margin-bottom: 0.25rem;
   }
+`;

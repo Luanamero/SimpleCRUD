@@ -1,38 +1,40 @@
-import React, { useState, useEffect } from 'react';
-import { PedidoService, Pedido } from '../../services/pedidos';
-import { ItemPedidoService, ItemPedido } from '../../services/itensPedido';
-import { LivroService, Livro } from '../../services/livros';
-import { ClienteService, Cliente } from '../../services/clientes';
-import './Orders.css';
-import Navbar from '../../components/NavBar';
+import { useEffect, useState } from "react";
+import Navbar from "../../components/NavBar";
+import { Cliente, ClienteService } from "../../services/clientes";
+import { ItemPedido, ItemPedidoService } from "../../services/itensPedido";
+import { Livro, LivroService } from "../../services/livros";
+import { Pedido, PedidoService } from "../../services/pedidos";
+import { OrdersGlobalStyles } from "./styles";
 
 const Pedidos = () => {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
-  const [itensPedido, setItensPedido] = useState<Record<number, ItemPedido[]>>({});
+  const [itensPedido, setItensPedido] = useState<Record<number, ItemPedido[]>>(
+    {}
+  );
   const [livros, setLivros] = useState<Livro[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [carregando, setCarregando] = useState<boolean>(true);
   const [pedidoEditando, setPedidoEditando] = useState<Pedido | null>(null);
-  
+
   // Função para formatar data para string YYYY-MM-DD
   const formatarDataString = (date?: Date | string) => {
-    if (typeof date === 'string') return date;
+    if (typeof date === "string") return date;
     const data = date || new Date();
-    return data.toISOString().split('T')[0];
+    return data.toISOString().split("T")[0];
   };
 
   // Form states - usando strings para datas
-  const [novoPedido, setNovoPedido] = useState<Omit<Pedido, 'id'>>({
+  const [novoPedido, setNovoPedido] = useState<Omit<Pedido, "id">>({
     cliente_id: 0,
     data: formatarDataString(), // String no formato YYYY-MM-DD
     total: 0,
-    status: "Processando"
+    status: "Processando",
   });
 
-  const [itensNovoPedido, setItensNovoPedido] = useState<Omit<ItemPedido, 'id'>[]>([
-    { livro_id: 0, quantidade: 1, preco_unitario: 0.0, pedido_id: 0 }
-  ]);
-  
+  const [itensNovoPedido, setItensNovoPedido] = useState<
+    Omit<ItemPedido, "id">[]
+  >([{ livro_id: 0, quantidade: 1, preco_unitario: 0.0, pedido_id: 0 }]);
+
   const [mostrarFormulario, setMostrarFormulario] = useState<boolean>(false);
 
   const carregarDados = async () => {
@@ -41,7 +43,7 @@ const Pedidos = () => {
       const [dadosPedidos, dadosLivros, dadosClientes] = await Promise.all([
         PedidoService.listar(),
         LivroService.listar(),
-        ClienteService.listar()
+        ClienteService.listar(),
       ]);
 
       setPedidos(dadosPedidos);
@@ -50,16 +52,18 @@ const Pedidos = () => {
 
       const mapaItens: Record<number, ItemPedido[]> = {};
       const todosItens = await ItemPedidoService.listar();
-      
-      dadosPedidos.forEach(pedido => {
+
+      dadosPedidos.forEach((pedido) => {
         if (pedido.id) {
-          mapaItens[pedido.id] = todosItens.filter(item => item.pedido_id === pedido.id);
+          mapaItens[pedido.id] = todosItens.filter(
+            (item) => item.pedido_id === pedido.id
+          );
         }
       });
-      
+
       setItensPedido(mapaItens);
     } catch (erro) {
-      console.error('Erro ao carregar dados:', erro);
+      console.error("Erro ao carregar dados:", erro);
     } finally {
       setCarregando(false);
     }
@@ -70,32 +74,39 @@ const Pedidos = () => {
   }, []);
 
   const resetarFormulario = () => {
-    setNovoPedido({ 
-      cliente_id: 0, 
+    setNovoPedido({
+      cliente_id: 0,
       data: formatarDataString(),
       total: 0,
-      status: "Processando"
+      status: "Processando",
     });
-    setItensNovoPedido([{
-      livro_id: 0, quantidade: 1, preco_unitario: 0.0,
-      pedido_id: 0
-    }]);
+    setItensNovoPedido([
+      {
+        livro_id: 0,
+        quantidade: 1,
+        preco_unitario: 0.0,
+        pedido_id: 0,
+      },
+    ]);
     setPedidoEditando(null);
   };
 
   const calcularTotalPedido = (itens: ItemPedido[]) => {
-    return itens.reduce((total, item) => total + (item.preco_unitario * item.quantidade), 0);
+    return itens.reduce(
+      (total, item) => total + item.preco_unitario * item.quantidade,
+      0
+    );
   };
 
   useEffect(() => {
     const novoTotal = calcularTotalPedido(itensNovoPedido);
-    setNovoPedido(prev => ({ ...prev, total: novoTotal }));
+    setNovoPedido((prev) => ({ ...prev, total: novoTotal }));
   }, [itensNovoPedido]);
 
   const handleAdicionarItem = () => {
     setItensNovoPedido([
       ...itensNovoPedido,
-      { livro_id: 0, quantidade: 1, preco_unitario: 0.0, pedido_id: 0 }
+      { livro_id: 0, quantidade: 1, preco_unitario: 0.0, pedido_id: 0 },
     ]);
   };
 
@@ -107,48 +118,53 @@ const Pedidos = () => {
     }
   };
 
-  const handleItemChange = (index: number, campo: keyof ItemPedido, valor: any) => {
+  const handleItemChange = (
+    index: number,
+    campo: keyof ItemPedido,
+    valor: any
+  ) => {
     const novosItens = [...itensNovoPedido];
-    let novoValor = campo === 'quantidade' ? parseInt(valor) || 0 : valor;
-  
-    if (campo === 'quantidade') {
+    let novoValor = campo === "quantidade" ? parseInt(valor) || 0 : valor;
+
+    if (campo === "quantidade") {
       const livroId = novosItens[index].livro_id;
-      const livroSelecionado = livros.find(l => l.id === livroId);
-  
+      const livroSelecionado = livros.find((l) => l.id === livroId);
+
       if (livroSelecionado && novoValor > livroSelecionado.estoque) {
         novoValor = livroSelecionado.estoque;
-        alert(`A quantidade excede o estoque disponível (${livroSelecionado.estoque}) do livro "${livroSelecionado.titulo}".`);
+        alert(
+          `A quantidade excede o estoque disponível (${livroSelecionado.estoque}) do livro "${livroSelecionado.titulo}".`
+        );
       }
     }
-  
+
     novosItens[index] = {
       ...novosItens[index],
-      [campo]: novoValor
+      [campo]: novoValor,
     };
-  
-    if (campo === 'livro_id') {
-      const livroSelecionado = livros.find(l => l.id === Number(valor));
+
+    if (campo === "livro_id") {
+      const livroSelecionado = livros.find((l) => l.id === Number(valor));
       novosItens[index].preco_unitario = livroSelecionado?.preco || 0;
     }
-  
+
     setItensNovoPedido(novosItens);
   };
-  
 
   const formatarMoeda = (valor: number | undefined): string => {
     const numero = Number(valor || 0);
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      maximumFractionDigits: 2,
     }).format(numero);
   };
 
   const formatarDataExibicao = (dataString?: string) => {
-    if (!dataString) return 'N/A';
+    if (!dataString) return "N/A";
     try {
-      return new Date(dataString).toLocaleDateString('pt-BR');
+      return new Date(dataString).toLocaleDateString("pt-BR");
     } catch {
       return dataString; // Retorna o valor original se não puder converter
     }
@@ -159,18 +175,20 @@ const Pedidos = () => {
       cliente_id: pedido.cliente_id,
       data: formatarDataString(pedido.data),
       total: pedido.total,
-      status: pedido.status || "Processando" 
+      status: pedido.status || "Processando",
     });
-    
+
     if (pedido.id && itensPedido[pedido.id]) {
-      setItensNovoPedido(itensPedido[pedido.id].map(item => ({
-        livro_id: item.livro_id,
-        quantidade: item.quantidade,
-        preco_unitario: item.preco_unitario,
-        pedido_id: item.pedido_id
-      })));
+      setItensNovoPedido(
+        itensPedido[pedido.id].map((item) => ({
+          livro_id: item.livro_id,
+          quantidade: item.quantidade,
+          preco_unitario: item.preco_unitario,
+          pedido_id: item.pedido_id,
+        }))
+      );
     }
-    
+
     setMostrarFormulario(true);
   };
 
@@ -183,68 +201,71 @@ const Pedidos = () => {
     if (/^\d{4}-\d{2}-\d{2}$/.test(data)) {
       return data;
     }
-    
+
     // Tenta converter para Date e depois para o formato correto
     const dateObj = new Date(data);
     if (!isNaN(dateObj.getTime())) {
-      return dateObj.toISOString().split('T')[0];
+      return dateObj.toISOString().split("T")[0];
     }
-    
+
     // Fallback: data atual
-    return new Date().toISOString().split('T')[0];
+    return new Date().toISOString().split("T")[0];
   };
-  
+
   const handleSalvarPedido = async () => {
     try {
       // Validações iniciais
       if (!novoPedido.cliente_id) throw new Error("Selecione um cliente");
       if (!novoPedido.data) throw new Error("Data do pedido é obrigatória");
-  
+
       // Validação dos itens
-      const itensInvalidos = itensNovoPedido.some(item =>
-        !item.livro_id || item.quantidade <= 0 || isNaN(item.preco_unitario)
+      const itensInvalidos = itensNovoPedido.some(
+        (item) =>
+          !item.livro_id || item.quantidade <= 0 || isNaN(item.preco_unitario)
       );
       if (itensInvalidos) {
         throw new Error("Verifique os itens do pedido");
       }
-  
+
       // Prepara dados do pedido
       const dadosPedido = {
         cliente_id: novoPedido.cliente_id,
         data: formatarDataParaBackend(novoPedido.data),
         total: calcularTotalPedido(itensNovoPedido),
-        status: novoPedido.status || "Processando"
+        status: novoPedido.status || "Processando",
       };
-  
+
       if (pedidoEditando?.id) {
         // Atualiza pedido existente
         await PedidoService.atualizar(pedidoEditando.id, dadosPedido);
-  
+
         // Atualiza ou cria itens
-        await Promise.all(itensNovoPedido.map(async (item) => {
-          if ('id' in item && item.id) {
-            if (typeof item.id === 'number') {
-              return await ItemPedidoService.atualizar(item.id, {
-                quantidade: item.quantidade,
-                preco_unitario: item.preco_unitario
-              });
+        await Promise.all(
+          itensNovoPedido.map(async (item) => {
+            if ("id" in item && item.id) {
+              if (typeof item.id === "number") {
+                return await ItemPedidoService.atualizar(item.id, {
+                  quantidade: item.quantidade,
+                  preco_unitario: item.preco_unitario,
+                });
+              } else {
+                throw new Error("Invalid item ID");
+              }
             } else {
-              throw new Error("Invalid item ID");
+              return await ItemPedidoService.criar({
+                pedido_id: pedidoEditando.id!,
+                livro_id: item.livro_id,
+                quantidade: item.quantidade,
+                preco_unitario: item.preco_unitario,
+              });
             }
-          } else {
-            return await ItemPedidoService.criar({
-              pedido_id: pedidoEditando.id!,
-              livro_id: item.livro_id,
-              quantidade: item.quantidade,
-              preco_unitario: item.preco_unitario
-            });
-          }
-        }));
+          })
+        );
         await carregarDados();
       } else {
         // Cria novo pedido
         const resposta = await PedidoService.criar(dadosPedido);
-        console.log("resposta",resposta)
+        console.log("resposta", resposta);
         let pedidoCriado;
         if (Array.isArray(resposta.data)) {
           const [id, userId, data, valor, status] = resposta.data;
@@ -253,54 +274,58 @@ const Pedidos = () => {
             userId,
             data,
             valor,
-            status
+            status,
           };
-        } else if (typeof resposta.data === 'object') {
+        } else if (typeof resposta.data === "object") {
           pedidoCriado = resposta.data;
         }
-        
+
         console.log("aaa", pedidoCriado);
-        
-        if (!pedidoCriado || typeof pedidoCriado.id !== 'number') {
-          throw new Error("Erro ao criar o pedido: resposta inválida do servidor.");
+
+        if (!pedidoCriado || typeof pedidoCriado.id !== "number") {
+          throw new Error(
+            "Erro ao criar o pedido: resposta inválida do servidor."
+          );
         }
         // Cria os itens e atualiza estoque
-        await Promise.all(itensNovoPedido.map(async (item) => {
-          await ItemPedidoService.criar({
-            pedido_id: pedidoCriado.id!,
-            livro_id: item.livro_id,
-            quantidade: item.quantidade,
-            preco_unitario: item.preco_unitario
-          });
-  
-          // Atualiza o estoque do livro
-          const livro = livros.find(l => l.id === item.livro_id);
-          console.log(livro)
-          if (livro) {
-            const novoEstoque = livro.estoque - item.quantidade;
-            await LivroService.atualizar(livro.id!, { ...livro, estoque: novoEstoque });
-          }
-        }));
-  
+        await Promise.all(
+          itensNovoPedido.map(async (item) => {
+            await ItemPedidoService.criar({
+              pedido_id: pedidoCriado.id!,
+              livro_id: item.livro_id,
+              quantidade: item.quantidade,
+              preco_unitario: item.preco_unitario,
+            });
+
+            // Atualiza o estoque do livro
+            const livro = livros.find((l) => l.id === item.livro_id);
+            console.log(livro);
+            if (livro) {
+              const novoEstoque = livro.estoque - item.quantidade;
+              await LivroService.atualizar(livro.id!, {
+                ...livro,
+                estoque: novoEstoque,
+              });
+            }
+          })
+        );
+
         await carregarDados();
         handleCancelarEdicao();
         resetarFormulario();
         setMostrarFormulario(false);
       }
-  
     } catch (erro) {
       console.error("Erro ao salvar pedido:", erro);
     }
   };
-  
-  
 
   const handleExcluirPedido = async (id: number) => {
     try {
       await PedidoService.excluir(id);
       await carregarDados();
     } catch (erro) {
-      console.error('Erro ao excluir pedido:', erro);
+      console.error("Erro ao excluir pedido:", erro);
     }
   };
 
@@ -311,239 +336,264 @@ const Pedidos = () => {
         cliente_id: pedidoAtual.cliente_id,
         data: pedidoAtual.data,
         total: pedidoAtual.total,
-        status: status
+        status: status,
       });
       await carregarDados();
     } catch (erro) {
-      console.error('Erro ao atualizar status:', erro);
+      console.error("Erro ao atualizar status:", erro);
     }
   };
 
   return (
-    <><Navbar /><div className="container-gestao">
-      <h1 className="titulo-pagina">Gestão de Pedidos</h1>
-  
-      <div className="acoes-gestao">
-        <button
-          className="botao botao-primario"
-          onClick={() => {
-            resetarFormulario();
-            setMostrarFormulario(!mostrarFormulario);
-          }}
-        >
-          {mostrarFormulario ? 'Cancelar' : 'Novo Pedido'}
-        </button>
-      </div>
-  
-      {mostrarFormulario && (
-        <div className="formulario-gestao">
-          <h2 className="titulo-formulario">
-            {pedidoEditando ? `Editando Status do Pedido #${pedidoEditando.id}` : 'Criar Novo Pedido'}
-          </h2>
-  
-          {pedidoEditando ? (
-            <div className="grid-formulario">
-              <div className="grupo-formulario">
-                <label>Status</label>
-                <select
-                  className="controle-formulario"
-                  value={novoPedido.status}
-                  onChange={(e) => setNovoPedido({
-                    ...novoPedido,
-                    status: e.target.value
-                  })}
-                >
-                  <option value="Processando">Processando</option>
-                  <option value="Enviado">Enviado</option>
-                  <option value="Concluído">Concluído</option>
-                  <option value="Cancelado">Cancelado</option>
-                </select>
-              </div>
-            </div>
-          ) : (
-            <>
+    <>
+      <Navbar />
+      <OrdersGlobalStyles />
+      <div className="container-gestao">
+        <h1 className="titulo-pagina">Gestão de Pedidos</h1>
+
+        <div className="acoes-gestao">
+          <button
+            className="botao botao-primario"
+            onClick={() => {
+              resetarFormulario();
+              setMostrarFormulario(!mostrarFormulario);
+            }}
+          >
+            {mostrarFormulario ? "Cancelar" : "Novo Pedido"}
+          </button>
+        </div>
+
+        {mostrarFormulario && (
+          <div className="formulario-gestao">
+            <h2 className="titulo-formulario">
+              {pedidoEditando
+                ? `Editando Status do Pedido #${pedidoEditando.id}`
+                : "Criar Novo Pedido"}
+            </h2>
+
+            {pedidoEditando ? (
               <div className="grid-formulario">
                 <div className="grupo-formulario">
-                  <label>Cliente</label>
+                  <label>Status</label>
                   <select
                     className="controle-formulario"
-                    value={novoPedido.cliente_id}
-                    onChange={(e) => setNovoPedido({
-                      ...novoPedido,
-                      cliente_id: parseInt(e.target.value)
-                    })}
+                    value={novoPedido.status}
+                    onChange={(e) =>
+                      setNovoPedido({
+                        ...novoPedido,
+                        status: e.target.value,
+                      })
+                    }
                   >
-                    <option value="0">Selecione um cliente</option>
-                    {clientes.map(cliente => (
-                      <option key={cliente.id} value={cliente.id}>
-                        {cliente.nome} ({cliente.email})
-                      </option>
-                    ))}
+                    <option value="Processando">Processando</option>
+                    <option value="Enviado">Enviado</option>
+                    <option value="Concluído">Concluído</option>
+                    <option value="Cancelado">Cancelado</option>
                   </select>
                 </div>
-  
-                <div className="grupo-formulario">
-                  <label>Data</label>
-                  <input
-                    type="date"
-                    className="controle-formulario"
-                    value={novoPedido.data}
-                    onChange={(e) => setNovoPedido({
-                      ...novoPedido,
-                      data: e.target.value
-                    })}
-                  />
-                </div>
-  
-                <div className="grupo-formulario">
-                  <label>Total</label>
-                  <input
-                    type="text"
-                    className="controle-formulario"
-                    value={formatarMoeda(novoPedido.total)}
-                    readOnly
-                  />
-                </div>
               </div>
-  
-              <h3 className="subtitulo-formulario">Itens do Pedido</h3>
-  
-              {itensNovoPedido.map((item, index) => (
-                <div key={index} className="item-pedido-form">
-                  <div className="grid-formulario">
-                    <div className="grupo-formulario">
-                      <label>Livro</label>
-                      <select
+            ) : (
+              <>
+                <div className="grid-formulario">
+                  <div className="grupo-formulario">
+                    <label>Cliente</label>
+                    <select
+                      className="controle-formulario"
+                      value={novoPedido.cliente_id}
+                      onChange={(e) =>
+                        setNovoPedido({
+                          ...novoPedido,
+                          cliente_id: parseInt(e.target.value),
+                        })
+                      }
+                    >
+                      <option value="0">Selecione um cliente</option>
+                      {clientes.map((cliente) => (
+                        <option key={cliente.id} value={cliente.id}>
+                          {cliente.nome} ({cliente.email})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grupo-formulario">
+                    <label>Data</label>
+                    <input
+                      type="date"
+                      className="controle-formulario"
+                      value={novoPedido.data}
+                      onChange={(e) =>
+                        setNovoPedido({
+                          ...novoPedido,
+                          data: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="grupo-formulario">
+                    <label>Total</label>
+                    <input
+                      type="text"
+                      className="controle-formulario"
+                      value={formatarMoeda(novoPedido.total)}
+                      readOnly
+                    />
+                  </div>
+                </div>
+
+                <h3 className="subtitulo-formulario">Itens do Pedido</h3>
+
+                {itensNovoPedido.map((item, index) => (
+                  <div key={index} className="item-pedido-form">
+                    <div className="grid-formulario">
+                      <div className="grupo-formulario">
+                        <label>Livro</label>
+                        <select
                           value={item.livro_id}
-                          onChange={e => handleItemChange(index, 'livro_id', e.target.value)}
+                          onChange={(e) =>
+                            handleItemChange(index, "livro_id", e.target.value)
+                          }
                         >
                           <option value={0}>Selecione um livro</option>
                           {livros
-                            .filter(livro => livro.estoque > 0)
+                            .filter((livro) => livro.estoque > 0)
                             .map((livro) => (
                               <option key={livro.id} value={livro.id}>
                                 {livro.titulo} (Estoque: {livro.estoque})
                               </option>
-                          ))}
+                            ))}
                         </select>
+                      </div>
 
-                    </div>
-  
-                    <div className="grupo-formulario">
-                      <label>Quantidade</label>
-                      <input
-                        type="number"
-                        min="1"
-                        className="controle-formulario"
-                        value={item.quantidade}
-                        onChange={(e) => handleItemChange(index, 'quantidade', parseInt(e.target.value))}
-                      />
-                    </div>
-  
-                    <div className="grupo-formulario">
-                      <label>Preço Unitário</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        className="controle-formulario"
-                        value={item.preco_unitario}
-                        readOnly
-                      />
-                    </div>
-  
-                    <div className="grupo-formulario">
-                      <label>Ações</label>
-                      <button
-                        type="button"
-                        className="botao botao-perigo"
-                        onClick={() => handleRemoverItem(index)}
-                        disabled={itensNovoPedido.length <= 1}
-                      >
-                        Remover
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-  
-              <button
-                type="button"
-                className="botao botao-primario"
-                onClick={handleAdicionarItem}
-                style={{ marginBottom: '1rem' }}
-              >
-                Adicionar Item
-              </button>
-            </>
-          )}
-  
-          <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem' }}>
-            <button
-              className="botao botao-primario"
-              onClick={handleSalvarPedido}
-            >
-              {pedidoEditando ? 'Salvar Status' : 'Criar Pedido'}
-            </button>
-            
-            <button
-              className="botao botao-secundario"
-              onClick={handleCancelarEdicao}
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
-  
-      {carregando ? (
-        <div className="mensagem-carregando">Carregando pedidos...</div>
-      ) : (
-        <div className="tabela-responsiva">
-          <table className="tabela-estilizada">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Cliente</th>
-                <th>Data</th>
-                <th>Status</th>
-                <th>Total</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pedidos.map(pedido => {
-                const cliente = clientes.find(c => c.id === pedido.cliente_id);
-                return (
-                  <tr key={pedido.id}>
-                    <td>{pedido.id}</td>
-                    <td>{cliente ? `${cliente.nome}` : 'Cliente não encontrado'}</td>
-                    <td>{formatarDataExibicao(pedido.data)}</td>
-                    <td>{pedido.status}</td>
-                    <td>{formatarMoeda(pedido.total)}</td>
-                    <td className="celula-acoes">
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <div className="grupo-formulario">
+                        <label>Quantidade</label>
+                        <input
+                          type="number"
+                          min="1"
+                          className="controle-formulario"
+                          value={item.quantidade}
+                          onChange={(e) =>
+                            handleItemChange(
+                              index,
+                              "quantidade",
+                              parseInt(e.target.value)
+                            )
+                          }
+                        />
+                      </div>
+
+                      <div className="grupo-formulario">
+                        <label>Preço Unitário</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          className="controle-formulario"
+                          value={item.preco_unitario}
+                          readOnly
+                        />
+                      </div>
+
+                      <div className="grupo-formulario">
+                        <label>Ações</label>
                         <button
-                          className="botao botao-aviso"
-                          onClick={() => handleIniciarEdicao(pedido)}
-                        >
-                          Editar Status
-                        </button>
-                        <button
+                          type="button"
                           className="botao botao-perigo"
-                          onClick={() => pedido.id && handleExcluirPedido(pedido.id)}
+                          onClick={() => handleRemoverItem(index)}
+                          disabled={itensNovoPedido.length <= 1}
                         >
-                          Excluir
+                          Remover
                         </button>
                       </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div></>
+                    </div>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  className="botao botao-primario"
+                  onClick={handleAdicionarItem}
+                  style={{ marginBottom: "1rem" }}
+                >
+                  Adicionar Item
+                </button>
+              </>
+            )}
+
+            <div style={{ marginTop: "1rem", display: "flex", gap: "1rem" }}>
+              <button
+                className="botao botao-primario"
+                onClick={handleSalvarPedido}
+              >
+                {pedidoEditando ? "Salvar Status" : "Criar Pedido"}
+              </button>
+
+              <button
+                className="botao botao-secundario"
+                onClick={handleCancelarEdicao}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+
+        {carregando ? (
+          <div className="mensagem-carregando">Carregando pedidos...</div>
+        ) : (
+          <div className="tabela-responsiva">
+            <table className="tabela-estilizada">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Cliente</th>
+                  <th>Data</th>
+                  <th>Status</th>
+                  <th>Total</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pedidos.map((pedido) => {
+                  const cliente = clientes.find(
+                    (c) => c.id === pedido.cliente_id
+                  );
+                  return (
+                    <tr key={pedido.id}>
+                      <td>{pedido.id}</td>
+                      <td>
+                        {cliente ? `${cliente.nome}` : "Cliente não encontrado"}
+                      </td>
+                      <td>{formatarDataExibicao(pedido.data)}</td>
+                      <td>{pedido.status}</td>
+                      <td>{formatarMoeda(pedido.total)}</td>
+                      <td className="celula-acoes">
+                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                          <button
+                            className="botao botao-aviso"
+                            onClick={() => handleIniciarEdicao(pedido)}
+                          >
+                            Editar Status
+                          </button>
+                          <button
+                            className="botao botao-perigo"
+                            onClick={() =>
+                              pedido.id && handleExcluirPedido(pedido.id)
+                            }
+                          >
+                            Excluir
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </>
   );
 };
 

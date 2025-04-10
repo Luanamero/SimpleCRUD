@@ -1,3 +1,6 @@
+import { createGlobalStyle } from "styled-components";
+
+export const AdminGlobalStyle = createGlobalStyle`
 /* Estilo geral */
 .admin-container {
   background-color: #3B2F2F; /* marrom escuro de fundo */
@@ -128,3 +131,4 @@
     padding: 1.5rem;
   }
 }
+`;
