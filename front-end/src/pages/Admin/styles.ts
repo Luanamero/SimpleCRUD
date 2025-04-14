@@ -1,6 +1,10 @@
 import { createGlobalStyle } from "styled-components";
 
 export const AdminGlobalStyle = createGlobalStyle`
+body {
+  margin: 0;
+}
+
 /* Estilo geral */
 .admin-container {
   background-color: #3B2F2F; /* marrom escuro de fundo */
