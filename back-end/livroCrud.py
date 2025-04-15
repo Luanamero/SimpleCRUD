@@ -9,6 +9,37 @@ class LivroCRUD:
         return psycopg2.connect(
            "postgresql://postgres:OPMuEZPtCOBSIxbSGdbYDYgjcGlwQebr@caboose.proxy.rlwy.net:56510/railway"
         )
+    
+    @staticmethod
+    def get_relatorio_clientes_pedidos():
+        """Retorna dados brutos do relatório (sem transformação)"""
+        conn = LivroCRUD.create_connection()
+        cur = conn.cursor()
+        try:
+            cur.execute("""
+            SELECT 
+                c.id AS cliente_id,
+                c.nome AS cliente_nome,
+                c.email AS cliente_email,
+                COUNT(p.id) AS total_pedidos,
+                SUM(p.total) AS valor_total_gasto,
+                MAX(p.data) AS ultima_compra,
+                p.status AS status_ultimo_pedido
+            FROM 
+                cliente c
+            LEFT JOIN 
+                pedido p ON c.id = p.cliente_id
+            GROUP BY 
+                c.id, c.nome, c.email, p.status
+            ORDER BY 
+                valor_total_gasto DESC;
+            """)
+            return cur.fetchall()  # Retorna lista de tuplas
+        except Exception as e:
+            raise Exception(f"Erro ao gerar relatório: {str(e)}")
+        finally:
+            cur.close()
+            conn.close()
 
 # ===== CRUD Livro =======
 

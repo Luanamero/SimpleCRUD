@@ -1,37 +1,32 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal } from "react";
 import { useNavigate } from "react-router-dom";
-import { useCliente } from "../../services/clientes"; // Use specific client hook
-import { usePedidosByCliente } from "../../services/pedidos"; // Use orders by client hook
-import { useLivros } from "../../services/livros"; // Use books hook
+import { useCliente } from "../../services/clientes";
+import { usePedidosByCliente } from "../../services/pedidos";
+import { useLivros } from "../../services/livros";
 import FiltroLivros from "../../components/FiltroLivros/FiltroLivros";
 import LivroItem from "../../components/LivroItem/LivroItem";
 import { CustomerProfileGlobalStyle } from "./styles";
 import { useAuth } from "../../services/auth";
 
-// Helper function to format date for display
+
 const formatarDataExibicao = (dataString?: string) => {
   if (!dataString) return "N/A";
   try {
-    // Assuming dataString is YYYY-MM-DD or compatible
     const [year, month, day] = dataString.split("-").map(Number);
-    // Use UTC to avoid timezone issues with date-only strings
-    return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString(
-      "pt-BR",
-      { timeZone: "UTC" }
-    );
+    return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("pt-BR", { timeZone: "UTC" });
   } catch {
-    return dataString; // Fallback if parsing fails
+    return dataString;
   }
 };
 
 const CustomerProfile = () => {
   const navigate = useNavigate();
-  const { user, logout, loading: authLoading } = useAuth(); // Get user and logout from auth context
-  const [activeTab, setActiveTab] = useState<"profile" | "orders" | "livros">(
-    "profile"
-  );
+  const { user, logout, loading: authLoading } = useAuth();
+  const [activeTab, setActiveTab] = useState<"profile" | "orders" | "livros" >("profile");
+  const [relatorio, setRelatorio] = useState<any>(null);
+  const [carregandoRelatorio, setCarregandoRelatorio] = useState(false);
+  const [erroRelatorio, setErroRelatorio] = useState<string | null>(null);
 
-  // Fetch customer data using useCliente hook, enabled only if user exists
   const {
     data: customer,
     isLoading: customerLoading,
@@ -39,7 +34,6 @@ const CustomerProfile = () => {
     error: customerQueryError,
   } = useCliente(user?.id ?? 0);
 
-  // Fetch orders using usePedidosByCliente hook, enabled only if user exists
   const {
     data: orders = [],
     isLoading: ordersLoading,
@@ -47,7 +41,6 @@ const CustomerProfile = () => {
     error: ordersQueryError,
   } = usePedidosByCliente(user?.id ?? 0);
 
-  // Fetch all books
   const {
     data: livros = [],
     isLoading: livrosLoading,
@@ -55,83 +48,55 @@ const CustomerProfile = () => {
     error: livrosQueryError,
   } = useLivros();
 
-  // Filter state for books
   const [filtro, setFiltro] = useState({
     nome: "",
     genero: "",
     precoMin: 0,
     precoMax: 999999,
-    estoqueBaixo: false, // Note: estoqueBaixo filter might not be needed for customer view
+    estoqueBaixo: false,
   });
 
-  // Memoized filtered books
   const livrosFiltrados = useMemo(() => {
     return livros.filter((livro) => {
-      const nomeMatch = livro.titulo
-        .toLowerCase()
-        .includes(filtro.nome.toLowerCase());
-      const generoMatch = (livro.genero || "")
-        .toLowerCase()
-        .includes(filtro.genero.toLowerCase());
-      const precoMatch =
-        livro.preco >= filtro.precoMin && livro.preco <= filtro.precoMax;
-      // Add stock check if needed, e.g., only show books in stock
+      const nomeMatch = livro.titulo.toLowerCase().includes(filtro.nome.toLowerCase());
+      const generoMatch = (livro.genero || "").toLowerCase().includes(filtro.genero.toLowerCase());
+      const precoMatch = livro.preco >= filtro.precoMin && livro.preco <= filtro.precoMax;
       const stockMatch = livro.estoque > 0;
 
       return nomeMatch && generoMatch && precoMatch && stockMatch;
     });
   }, [livros, filtro]);
 
+
+
   const handleLogout = async () => {
     await logout();
     navigate("/login");
   };
 
-  // Combined loading state
-  const isLoading =
-    authLoading || customerLoading || ordersLoading || livrosLoading;
-  // Combined error state
+  const isLoading = authLoading || customerLoading || ordersLoading || livrosLoading;
   const isError = customerError || ordersError || livrosError;
-  const errorMessage =
-    (customerQueryError as Error)?.message ||
-    (ordersQueryError as Error)?.message ||
-    (livrosQueryError as Error)?.message ||
-    "Erro ao carregar dados.";
+  const errorMessage = (customerQueryError as Error)?.message || 
+                      (ordersQueryError as Error)?.message || 
+                      (livrosQueryError as Error)?.message || 
+                      "Erro ao carregar dados.";
 
   if (isLoading) {
-    return (
-      <div className="loading" style={{ textAlign: "center", padding: "2rem" }}>
-        Carregando...
-      </div>
-    );
+    return <div className="loading" style={{ textAlign: "center", padding: "2rem" }}>Carregando...</div>;
   }
 
-  // Handle case where user is not logged in or customer data failed to load
   if (!user || !customer) {
-    // You might want to redirect to login here if user is null after loading
     if (!authLoading && !user) {
       navigate("/login");
-      return null; // Avoid rendering anything while redirecting
+      return null;
     }
-    return (
-      <div
-        className="error"
-        style={{ textAlign: "center", padding: "2rem", color: "red" }}
-      >
-        Erro ao carregar perfil do cliente. Tente fazer login novamente.
-      </div>
-    );
+    return <div className="error" style={{ textAlign: "center", padding: "2rem", color: "red" }}>
+      Erro ao carregar perfil do cliente. Tente fazer login novamente.
+    </div>;
   }
 
   if (isError) {
-    return (
-      <div
-        className="error"
-        style={{ textAlign: "center", padding: "2rem", color: "red" }}
-      >
-        {errorMessage}
-      </div>
-    );
+    return <div className="error" style={{ textAlign: "center", padding: "2rem", color: "red" }}>{errorMessage}</div>;
   }
 
   return (
@@ -143,24 +108,16 @@ const CustomerProfile = () => {
       </header>
 
       <div className="profile-tabs">
-        <button
-          className={activeTab === "profile" ? "active" : ""}
-          onClick={() => setActiveTab("profile")}
-        >
+        <button className={activeTab === "profile" ? "active" : ""} onClick={() => setActiveTab("profile")}>
           Informações Pessoais
         </button>
-        <button
-          className={activeTab === "orders" ? "active" : ""}
-          onClick={() => setActiveTab("orders")}
-        >
+        <button className={activeTab === "orders" ? "active" : ""} onClick={() => setActiveTab("orders")}>
           Meus Pedidos ({orders.length})
         </button>
-        <button
-          className={activeTab === "livros" ? "active" : ""}
-          onClick={() => setActiveTab("livros")}
-        >
+        <button className={activeTab === "livros" ? "active" : ""} onClick={() => setActiveTab("livros")}>
           Explorar Livros
         </button>
+
       </div>
 
       <div className="profile-content">
@@ -182,25 +139,17 @@ const CustomerProfile = () => {
                   <span className="info-value">{customer.telefone}</span>
                 </div>
               </div>
-              {/* Add Edit Profile Button - Functionality needs implementation */}
-              {/* <button className="edit-button" style={{ marginTop: '1rem' }}>Editar Perfil</button> */}
             </div>
 
             <div className="info-card">
               <h2>Endereço</h2>
               <p>{customer.endereco || "Nenhum endereço cadastrado."}</p>
-              {/* Add Edit Address Button - Functionality needs implementation */}
               <button className="edit-button">Editar Endereço</button>
             </div>
 
-            <div className="actions" style={{ gridColumn: "1 / -1" }}>
-              {" "}
-              {/* Ensure actions span full width */}
-              {/* Add Change Password Button - Functionality needs implementation */}
+            <div className="actions">
               <button className="change-password">Alterar Senha</button>
-              <button className="logout" onClick={handleLogout}>
-                Sair
-              </button>
+              <button className="logout" onClick={handleLogout}>Sair</button>
             </div>
           </div>
         )}
@@ -210,10 +159,7 @@ const CustomerProfile = () => {
             {orders.length === 0 ? (
               <div className="no-orders">
                 <p>Você ainda não fez nenhum pedido.</p>
-                <button
-                  className="browse-books"
-                  onClick={() => setActiveTab("livros")}
-                >
+                <button className="browse-books" onClick={() => setActiveTab("livros")}>
                   Explorar Livros
                 </button>
               </div>
@@ -223,27 +169,15 @@ const CustomerProfile = () => {
                   <div className="order-header">
                     <div>
                       <span className="order-id">Pedido #{order.id}</span>
-                      <span className="order-date">
-                        {formatarDataExibicao(order.data)}
-                      </span>
+                      <span className="order-date">{formatarDataExibicao(order.data)}</span>
                     </div>
-                    <span
-                      className={`order-status status-${(
-                        order.status || "processando"
-                      )
-                        .toLowerCase()
-                        .replace(" ", "-")}`}
-                    >
+                    <span className={`order-status status-${(order.status || "processando").toLowerCase().replace(" ", "-")}`}>
                       {order.status || "Processando"}
                     </span>
                   </div>
-                  {/* TODO: Display order items here if needed */}
-                  {/* You would need to fetch items for each order or have them included */}
                   <div className="order-footer">
-                    {/* <button className="order-details">Ver Detalhes</button> */}
                     <span className="order-total">
-                      Total:{" "}
-                      <span>
+                      Total: <span>
                         {order.total?.toLocaleString("pt-BR", {
                           style: "currency",
                           currency: "BRL",
@@ -260,40 +194,24 @@ const CustomerProfile = () => {
         {activeTab === "livros" && (
           <div className="available-books">
             <h2>Livros Disponíveis</h2>
-
             <FiltroLivros
               nome={filtro.nome}
               genero={filtro.genero}
               precoMin={filtro.precoMin}
               precoMax={filtro.precoMax}
-              // Pass only relevant filters for customer view
-              // estoqueBaixo={filtro.estoqueBaixo} // Likely not needed for customer
-              // mostrarEstoqueBaixo={false} // Hide this option
-              onChange={(novoFiltro) =>
-                setFiltro({
-                  ...filtro, // Keep existing filters
-                  ...novoFiltro, // Apply new filters from component
-                  // Ensure estoqueBaixo isn't accidentally set if component sends it
-                  estoqueBaixo: false,
-                })
-              }
+              onChange={(novoFiltro) => setFiltro({
+                ...filtro,
+                ...novoFiltro,
+                estoqueBaixo: false,
+              })}
             />
 
             {livrosLoading ? (
               <p>Carregando livros...</p>
             ) : livrosFiltrados.length > 0 ? (
-              <div
-                className="books-grid"
-                style={{
-                  gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
-                }}
-              >
+              <div className="books-grid">
                 {livrosFiltrados.map((livro) => (
-                  // Assuming LivroItem takes livro and potentially an onAddToCart prop
-                  <LivroItem
-                    key={livro.id}
-                    livro={livro} /* onAddToCart={handleAddToCart} */
-                  />
+                  <LivroItem key={livro.id} livro={livro} />
                 ))}
               </div>
             ) : (

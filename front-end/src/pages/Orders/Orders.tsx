@@ -18,6 +18,12 @@ import {
 import { OrdersGlobalStyles } from "./styles";
 import { ItemPedido } from "../../services/itensPedido"; // Import ItemPedido type
 
+
+
+
+
+
+
 // Helper function to format date string
 const formatarDataString = (date?: Date | string): string => {
   if (!date) return new Date().toISOString().split("T")[0];
@@ -66,7 +72,7 @@ const formatarDataExibicao = (dataString?: string) => {
 };
 
 // Initial state for a new item
-const initialItemState: Omit<ItemPedido, "id" | "pedido_id"> = {
+const initialItemState: Omit<ItemPedido, "id" | "pedido_id"> & { originalItemId?: number } = {
   livro_id: 0,
   quantidade: 1,
   preco_unitario: 0.0,
@@ -86,7 +92,7 @@ const Pedidos = () => {
     status: "Processando",
   });
   const [itensFormulario, setItensFormulario] = useState<
-    Omit<ItemPedido, "id" | "pedido_id">[]
+    (Omit<ItemPedido, "id" | "pedido_id"> & { originalItemId?: number })[]
   >([initialItemState]);
 
   // React Query Hooks
@@ -122,6 +128,22 @@ const Pedidos = () => {
   const updateItemPedidoMutation = useUpdateItemPedido(); // Assuming you have this
   const deleteItemPedidoMutation = useDeleteItemPedido(); // Assuming you have this
   const updateLivroMutation = useUpdateLivro(); // For stock updates
+
+  const [descontoFlamengo, setDescontoFlamengo] = useState(false);
+const [descontoOnePiece, setDescontoOnePiece] = useState(false);
+const [descontoNascidoEmMari, setDescontoNascidoEmMari] = useState(false);
+const [metodoPagamento, setMetodoPagamento] = useState("");// Default to "cartao"
+
+// Função para calcular o desconto
+const calcularDesconto = () => {
+  let desconto = 0;
+
+  if (descontoFlamengo) desconto += 0.05;  // 5% de desconto se escolher Flamengo
+  if (descontoOnePiece) desconto += 0.05;  // 5% de desconto se escolher One Piece
+  if (descontoNascidoEmMari) desconto += 0.10;  // 10% de desconto se escolher Nascido em Mari
+
+  return desconto;
+};
 
   // Map items to their orders for easy access
   const itensPorPedido = useMemo(() => {
@@ -278,7 +300,7 @@ const Pedidos = () => {
 
       const dadosPedidoParaSalvar = {
         ...novoPedidoData,
-        total: totalFormulario,
+        total: totalComDesconto,
       };
 
       if (pedidoEditando?.id) {
@@ -303,7 +325,7 @@ const Pedidos = () => {
 
         // Identify items to delete
         const itensParaDeletar = itensAtuaisNoBackend.filter(
-          (item) => !itensFormularioIds.has(item.id)
+          (item) => item.id !== undefined && !itensFormularioIds.has(item.id)
         );
 
         // Identify items to update and create
@@ -428,6 +450,18 @@ const Pedidos = () => {
     }
   };
 
+  // Função para calcular o total com desconto
+const totalComDesconto = useMemo(() => {
+  const desconto = calcularDesconto();
+  const total = itensFormulario.reduce(
+    (total, item) =>
+      total + (item.preco_unitario || 0) * (item.quantidade || 0),
+    0
+  );
+  return total * (1 - desconto);  // Aplica o desconto no total
+}, [itensFormulario, descontoFlamengo, descontoOnePiece, descontoNascidoEmMari]);
+  
+
   // Combined loading state
   const isLoading =
     pedidosLoading || livrosLoading || clientesLoading || itensLoading;
@@ -491,232 +525,279 @@ const Pedidos = () => {
         </div>
 
         {mostrarFormulario && (
-          <div className="formulario-gestao">
-            <h2 className="titulo-formulario">
-              {pedidoEditando
-                ? `Editando Pedido #${pedidoEditando.id}`
-                : "Criar Novo Pedido"}
-            </h2>
+  <div className="formulario-gestao">
+    <h2 className="titulo-formulario">
+      {pedidoEditando
+        ? `Editando Pedido #${pedidoEditando.id}`
+        : "Criar Novo Pedido"}
+    </h2>
 
-            {/* --- Form Fields --- */}
-            <div className="grid-formulario">
-              {/* Client Selection (Only for Create) */}
-              {!pedidoEditando && (
-                <div className="grupo-formulario">
-                  <label htmlFor="cliente_id">Cliente</label>
-                  <select
-                    id="cliente_id"
-                    className="controle-formulario"
-                    value={novoPedidoData.cliente_id}
-                    onChange={(e) =>
-                      setNovoPedidoData({
-                        ...novoPedidoData,
-                        cliente_id: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    disabled={isMutating || !!pedidoEditando} // Disable when editing
-                  >
-                    <option value={0}>Selecione um cliente</option>
-                    {clientes.map((cliente) => (
-                      <option key={cliente.id} value={cliente.id}>
-                        {cliente.nome} ({cliente.email})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Display Client Name (Only for Edit) */}
-              {pedidoEditando && (
-                <div className="grupo-formulario">
-                  <label>Cliente</label>
-                  <input
-                    type="text"
-                    className="controle-formulario"
-                    value={
-                      clientes.find((c) => c.id === pedidoEditando.cliente_id)
-                        ?.nome || "Cliente não encontrado"
-                    }
-                    readOnly
-                    disabled
-                  />
-                </div>
-              )}
-
-              <div className="grupo-formulario">
-                <label htmlFor="data">Data</label>
-                <input
-                  id="data"
-                  type="date"
-                  className="controle-formulario"
-                  value={novoPedidoData.data}
-                  onChange={(e) =>
-                    setNovoPedidoData({
-                      ...novoPedidoData,
-                      data: e.target.value,
-                    })
-                  }
-                  disabled={isMutating}
-                />
-              </div>
-
-              <div className="grupo-formulario">
-                <label htmlFor="status">Status</label>
-                <select
-                  id="status"
-                  className="controle-formulario"
-                  value={novoPedidoData.status}
-                  onChange={(e) =>
-                    setNovoPedidoData({
-                      ...novoPedidoData,
-                      status: e.target.value,
-                    })
-                  }
-                  disabled={isMutating}
-                >
-                  <option value="Processando">Processando</option>
-                  <option value="Enviado">Enviado</option>
-                  <option value="Concluído">Concluído</option>
-                  <option value="Cancelado">Cancelado</option>
-                </select>
-              </div>
-
-              <div className="grupo-formulario">
-                <label>Total Calculado</label>
-                <input
-                  type="text"
-                  className="controle-formulario"
-                  value={formatarMoeda(totalFormulario)}
-                  readOnly
-                  disabled
-                />
-              </div>
-            </div>
-
-            {/* --- Items Section --- */}
-            <h3 className="subtitulo-formulario">Itens do Pedido</h3>
-            {itensFormulario.map((item, index) => (
-              <div key={index} className="item-pedido-form">
-                <div
-                  className="grid-formulario"
-                  style={{ alignItems: "flex-end", gap: "1rem" }}
-                >
-                  {" "}
-                  {/* Align items for button */}
-                  <div className="grupo-formulario" style={{ marginBottom: 0 }}>
-                    <label htmlFor={`livro-${index}`}>Livro</label>
-                    <select
-                      id={`livro-${index}`}
-                      className="controle-formulario"
-                      value={item.livro_id}
-                      onChange={(e) =>
-                        handleItemChange(index, "livro_id", e.target.value)
-                      }
-                      disabled={isMutating}
-                    >
-                      <option value={0}>Selecione um livro</option>
-                      {livros
-                        // Show all books, validation happens on quantity change
-                        .map((livro) => (
-                          <option key={livro.id} value={livro.id}>
-                            {livro.titulo} (Estoque: {livro.estoque}) -{" "}
-                            {formatarMoeda(livro.preco)}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-                  <div className="grupo-formulario" style={{ marginBottom: 0 }}>
-                    <label htmlFor={`quantidade-${index}`}>Quantidade</label>
-                    <input
-                      id={`quantidade-${index}`}
-                      type="number"
-                      min="1"
-                      className="controle-formulario"
-                      value={item.quantidade}
-                      onChange={(e) =>
-                        handleItemChange(index, "quantidade", e.target.value)
-                      }
-                      disabled={isMutating || !item.livro_id} // Disable if no book selected
-                    />
-                  </div>
-                  <div className="grupo-formulario" style={{ marginBottom: 0 }}>
-                    <label htmlFor={`preco-${index}`}>Preço Unitário</label>
-                    <input
-                      id={`preco-${index}`}
-                      type="text" // Display formatted currency
-                      className="controle-formulario"
-                      value={formatarMoeda(item.preco_unitario)}
-                      readOnly
-                      disabled
-                    />
-                  </div>
-                  <div className="grupo-formulario" style={{ marginBottom: 0 }}>
-                    {/* <label>&nbsp;</label> Keep label for alignment or remove */}
-                    <button
-                      type="button"
-                      className="botao botao-perigo"
-                      onClick={() => handleRemoverItem(index)}
-                      disabled={isMutating || itensFormulario.length <= 1}
-                      style={{ width: "100%" }} // Make button full width in its grid cell
-                    >
-                      Remover Item
-                    </button>
-                  </div>
-                </div>
-              </div>
+    {/* --- Form Fields --- */}
+    <div className="grid-formulario">
+      {/* Client Selection (Only for Create) */}
+      {!pedidoEditando && (
+        <div className="grupo-formulario">
+          <label htmlFor="cliente_id">Cliente</label>
+          <select
+            id="cliente_id"
+            className="controle-formulario"
+            value={novoPedidoData.cliente_id}
+            onChange={(e) =>
+              setNovoPedidoData({
+                ...novoPedidoData,
+                cliente_id: parseInt(e.target.value) || 0,
+              })
+            }
+            disabled={isMutating || !!pedidoEditando} // Disable when editing
+          >
+            <option value={0}>Selecione um cliente</option>
+            {clientes.map((cliente) => (
+              <option key={cliente.id} value={cliente.id}>
+                {cliente.nome} ({cliente.email})
+              </option>
             ))}
+          </select>
+        </div>
+      )}
 
+      {/* Display Client Name (Only for Edit) */}
+      {pedidoEditando && (
+        <div className="grupo-formulario">
+          <label>Cliente</label>
+          <input
+            type="text"
+            className="controle-formulario"
+            value={
+              clientes.find((c) => c.id === pedidoEditando.cliente_id)
+                ?.nome || "Cliente não encontrado"
+            }
+            readOnly
+            disabled
+          />
+        </div>
+      )}
+
+      <div className="grupo-formulario">
+        <label htmlFor="data">Data</label>
+        <input
+          id="data"
+          type="date"
+          className="controle-formulario"
+          value={novoPedidoData.data}
+          onChange={(e) =>
+            setNovoPedidoData({
+              ...novoPedidoData,
+              data: e.target.value,
+            })
+          }
+          disabled={isMutating}
+        />
+      </div>
+
+      <div className="grupo-formulario">
+        <label htmlFor="status">Status</label>
+        <select
+          id="status"
+          className="controle-formulario"
+          value={novoPedidoData.status}
+          onChange={(e) =>
+            setNovoPedidoData({
+              ...novoPedidoData,
+              status: e.target.value,
+            })
+          }
+          disabled={isMutating}
+        >
+          <option value="Processando">Processando</option>
+          <option value="Enviado">Enviado</option>
+          <option value="Concluído">Concluído</option>
+          <option value="Cancelado">Cancelado</option>
+        </select>
+      </div>
+
+      <div className="grupo-formulario">
+        <label htmlFor="pagamento">Método de Pagamento</label>
+        <select
+          id="pagamento"
+          className="controle-formulario"
+          value={metodoPagamento}
+          onChange={(e) => setMetodoPagamento(e.target.value)}
+          disabled={isMutating}
+        >
+          <option value="">Selecione um método</option>
+          <option value="pix">PIX</option>
+          <option value="boleto">Boleto Bancário</option>
+          <option value="cartao_credito">Cartão de Crédito</option>
+          <option value="cartao_debito">Cartão de Débito</option>
+          <option value="dinheiro">Dinheiro</option>
+        </select>
+      </div>
+      {/* --- Discount Checkboxes --- */}
+      <h2>Descontos</h2>
+      <label>
+        <input
+          type="checkbox"
+          checked={descontoFlamengo}
+          onChange={() => setDescontoFlamengo(!descontoFlamengo)}
+        />
+        Desconto Flamengo (5%)
+      </label>
+      <label>
+        <input
+          type="checkbox"
+          checked={descontoOnePiece}
+          onChange={() => setDescontoOnePiece(!descontoOnePiece)}
+        />
+        Desconto One Piece (5%)
+      </label>
+      <label>
+        <input
+          type="checkbox"
+          checked={descontoNascidoEmMari}
+          onChange={() => setDescontoNascidoEmMari(!descontoNascidoEmMari)}
+        />
+        Desconto Nascido em Mari (10%)
+      </label>
+
+      <h3>Total com Desconto: {formatarMoeda(totalComDesconto)}</h3>
+
+      <div className="grupo-formulario">
+        <label>Total Calculado</label>
+        <input
+          type="text"
+          className="controle-formulario"
+          value={formatarMoeda(totalFormulario)}
+          readOnly
+          disabled
+        />
+      </div>
+    </div>
+
+    {/* --- Items Section --- */}
+    <h3 className="subtitulo-formulario">Itens do Pedido</h3>
+    {itensFormulario.map((item, index) => (
+      <div key={index} className="item-pedido-form">
+        <div
+          className="grid-formulario"
+          style={{ alignItems: "flex-end", gap: "1rem" }}
+        >
+          {" "}
+          {/* Align items for button */}
+          <div className="grupo-formulario" style={{ marginBottom: 0 }}>
+            <label htmlFor={`livro-${index}`}>Livro</label>
+            <select
+              id={`livro-${index}`}
+              className="controle-formulario"
+              value={item.livro_id}
+              onChange={(e) =>
+                handleItemChange(index, "livro_id", e.target.value)
+              }
+              disabled={isMutating}
+            >
+              <option value={0}>Selecione um livro</option>
+              {livros
+                // Show all books, validation happens on quantity change
+                .map((livro) => (
+                  <option key={livro.id} value={livro.id}>
+                    {livro.titulo} (Estoque: {livro.estoque}) -{" "}
+                    {formatarMoeda(livro.preco)}
+                  </option>
+                ))}
+            </select>
+          </div>
+          <div className="grupo-formulario" style={{ marginBottom: 0 }}>
+            <label htmlFor={`quantidade-${index}`}>Quantidade</label>
+            <input
+              id={`quantidade-${index}`}
+              type="number"
+              min="1"
+              className="controle-formulario"
+              value={item.quantidade}
+              onChange={(e) =>
+                handleItemChange(index, "quantidade", e.target.value)
+              }
+              disabled={isMutating || !item.livro_id} // Disable if no book selected
+            />
+          </div>
+          <div className="grupo-formulario" style={{ marginBottom: 0 }}>
+            <label htmlFor={`preco-${index}`}>Preço Unitário</label>
+            <input
+              id={`preco-${index}`}
+              type="text" // Display formatted currency
+              className="controle-formulario"
+              value={formatarMoeda(item.preco_unitario)}
+              readOnly
+              disabled
+            />
+          </div>
+          <div className="grupo-formulario" style={{ marginBottom: 0 }}>
+            {/* <label>&nbsp;</label> Keep label for alignment or remove */}
             <button
               type="button"
-              className="botao botao-secundario" // Use a different style for add item
-              onClick={handleAdicionarItem}
-              disabled={isMutating}
-              style={{
-                marginTop: "1rem",
-                background: "#6c757d",
-                color: "white",
-              }}
+              className="botao botao-perigo"
+              onClick={() => handleRemoverItem(index)}
+              disabled={isMutating || itensFormulario.length <= 1}
+              style={{ width: "100%" }} // Make button full width in its grid cell
             >
-              Adicionar Item
+              Remover Item
             </button>
-
-            {/* --- Form Actions --- */}
-            <div
-              style={{
-                marginTop: "2rem",
-                display: "flex",
-                gap: "1rem",
-                borderTop: "1px solid var(--border)",
-                paddingTop: "1.5rem",
-              }}
-            >
-              <button
-                className="botao botao-primario"
-                onClick={handleSalvarPedido}
-                disabled={isMutating}
-              >
-                {isMutating ? (
-                  <>
-                    <i className="fas fa-spinner fa-spin"></i> Salvando...
-                  </>
-                ) : pedidoEditando ? (
-                  "Salvar Alterações"
-                ) : (
-                  "Criar Pedido"
-                )}
-              </button>
-              <button
-                type="button"
-                className="botao botao-secundario"
-                onClick={handleCancelarFormulario}
-                disabled={isMutating}
-                style={{ background: "#6c757d", color: "white" }}
-              >
-                Cancelar
-              </button>
-            </div>
           </div>
+        </div>
+      </div>
+    ))}
+
+    <button
+      type="button"
+      className="botao botao-secundario" // Use a different style for add item
+      onClick={handleAdicionarItem}
+      disabled={isMutating}
+      style={{
+        marginTop: "1rem",
+        background: "#6c757d",
+        color: "white",
+      }}
+    >
+      Adicionar Item
+    </button>
+
+    {/* --- Form Actions --- */}
+    <div
+      style={{
+        marginTop: "2rem",
+        display: "flex",
+        gap: "1rem",
+        borderTop: "1px solid var(--border)",
+        paddingTop: "1.5rem",
+      }}
+    >
+      <button
+        className="botao botao-primario"
+        onClick={handleSalvarPedido}
+        disabled={isMutating}
+      >
+        {isMutating ? (
+          <>
+            <i className="fas fa-spinner fa-spin"></i> Salvando...
+          </>
+        ) : pedidoEditando ? (
+          "Salvar Alterações"
+        ) : (
+          "Criar Pedido"
         )}
+      </button>
+      <button
+        type="button"
+        className="botao botao-secundario"
+        onClick={handleCancelarFormulario}
+        disabled={isMutating}
+        style={{ background: "#6c757d", color: "white" }}
+      >
+        Cancelar
+      </button>
+    </div>
+  </div>
+)}
+
 
         {/* --- Orders Table --- */}
         {isLoading ? (

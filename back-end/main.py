@@ -54,6 +54,33 @@ def transform_to_dict(data, col_names):
         return dict(zip(col_names, data))
     return data
 
+@app.get("/relatorio/clientes-pedidos", response_model=dict, tags=["Relatorio"])
+def relatorio_clientes_pedidos(current_user=Depends(get_current_user_from_cookie)):
+    try:
+        # Pega dados brutos do banco
+        dados_brutos = LivroCRUD.get_relatorio_clientes_pedidos()
+        
+        # Define os nomes das colunas (deve corresponder à query SQL)
+        colunas = [
+            'cliente_id',
+            'cliente_nome',
+            'cliente_email',
+            'total_pedidos',
+            'valor_total_gasto',
+            'ultima_compra',
+            'status_ultimo_pedido'
+        ]
+        
+        # Transforma em dicionário
+        relatorio = transform_to_dict(dados_brutos, colunas)
+        
+        return {
+            "message": "Relatório de clientes e pedidos gerado com sucesso",
+            "data": relatorio
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # ============== Rotas para Livros ==============
 @app.post("/livros/", response_model=dict, tags=["Livros"])

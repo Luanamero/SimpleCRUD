@@ -175,6 +175,153 @@ export const ClientsGlobalStyles = createGlobalStyle`
   font-style: italic;
 }
 
+/* ===== REPORT STYLES (NEW) ===== */
+.info-card {
+  background: #ffffff;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  margin-bottom: 2rem;
+}
+
+.info-card h2 {
+  color: #8B5E3C;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.info-card h3 {
+  color: #8B5E3C;
+  margin: 1.5rem 0 1rem;
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+.edit-button {
+  background: #8B5E3C;
+  color: white;
+  border: none;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin-bottom: 1.5rem;
+}
+
+.edit-button:hover {
+  background: #A9746E;
+}
+
+.edit-button:disabled {
+  background: #e2d5ca;
+  cursor: not-allowed;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.info-item {
+  background: #f8f4f0;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  text-align: center;
+}
+
+.info-label {
+  display: block;
+  color: #8B735B;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.info-value {
+  display: block;
+  color: #4B3621;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.orders-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.order-card {
+  background: #f8f4f0;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  transition: transform 0.2s ease;
+}
+
+.order-card:hover {
+  transform: translateY(-2px);
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #4B3621;
+}
+
+.order-footer {
+  display: flex;
+  justify-content: space-between;
+  color: #8B735B;
+  font-size: 0.875rem;
+}
+
+.status-pendente {
+  color: #D9982C;
+}
+
+.status-entregue {
+  color: #6AA84F;
+}
+
+.status-cancelado {
+  color: #C94C4C;
+}
+
+/* ===== TABS STYLES ===== */
+.profile-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #e2d5ca;
+  padding-bottom: 0.5rem;
+}
+
+.profile-tabs button {
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  border: none;
+  border-radius: 0.5rem 0.5rem 0 0;
+  color: #8B735B;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.profile-tabs button:hover {
+  color: #8B5E3C;
+  background: rgba(139, 94, 60, 0.1);
+}
+
+.profile-tabs button.active {
+  color: #8B5E3C;
+  background: rgba(139, 94, 60, 0.1);
+  border-bottom: 2px solid #8B5E3C;
+}
+
 /* ===== RESPONSIVE ADJUSTMENTS ===== */
 @media (max-width: 768px) {
   .form-grid {
