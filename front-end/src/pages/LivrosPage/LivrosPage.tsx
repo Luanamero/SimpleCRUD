@@ -34,7 +34,7 @@ const LivrosPage = () => {
     return Object.fromEntries(editorasData.map((e) => [e.id!, e.nome]));
   }, [editorasData]);
 
-  const [livrosFiltrados, setLivrosFiltrados] = useState<Livro[]>([]);
+  const [livrosFiltradosState, setLivrosFiltrados] = useState<Livro[]>([]);
   const [livroEdicao, setLivroEdicao] = useState<Livro | null>(null);
   const [novoLivro, setNovoLivro] = useState<Livro>({
     titulo: "",
@@ -55,10 +55,10 @@ const LivrosPage = () => {
   });
 
   // Filter livros whenever data or filtros changes
-  useMemo(() => {
+  const livrosFiltradosComputed = useMemo(() => {
     const { nome, genero, precoMin, precoMax, estoqueBaixo } = filtros;
-
-    const filtrados = livros.filter(
+  
+    return livros.filter(
       (livro) =>
         livro.titulo.toLowerCase().includes(nome.toLowerCase()) &&
         (livro.genero || "").toLowerCase().includes(genero.toLowerCase()) &&
@@ -66,8 +66,6 @@ const LivrosPage = () => {
         livro.preco <= precoMax &&
         (!estoqueBaixo || livro.estoque < 5)
     );
-
-    setLivrosFiltrados(filtrados);
   }, [livros, filtros]);
 
   const handleExcluirLivro = async (id: number) => {
@@ -305,7 +303,7 @@ const LivrosPage = () => {
 
           <h2 className="section-title">Livros Cadastrados</h2>
           <ul className="lista-livros">
-            {livrosFiltrados.map((livro) => (
+            {livrosFiltradosComputed.map((livro) => (
               <li key={livro.id}>
                 <span>
                   <strong>{livro.titulo}</strong> – {autores[livro.autor_id]} –{" "}
