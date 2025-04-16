@@ -343,7 +343,9 @@ def criar_pedido(pedido: PedidoCreate):
             total=pedido.total,
             status=pedido.status,
         )
-        return {"message": "Pedido criado com sucesso", "data": novo_pedido}
+        pedido_dict = transform_to_dict(novo_pedido, ["id", "cliente_id", "data", "total", "status"])
+        print(novo_pedido)
+        return {"message": "Pedido criado com sucesso", "data": pedido_dict}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -446,6 +448,32 @@ def deletar_item_pedido(item_id: int):
         return {"message": "Item de pedido deletado", "data": deleted_item}
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.get("/itens-pedido/pedido/{pedido_id}", response_model=List[dict], tags=["ItensPedidos"])
+def listar_itens_por_pedido(pedido_id: int):
+    try:
+        itens = LivroCRUD.get_itens_by_pedido_id(pedido_id)
+        col_names = ["id", "pedido_id", "livro_id", "quantidade", "preco_unitario"]
+        itens_dict = transform_to_dict(itens, col_names)
+        
+        # Get book details for each item
+        for item in itens_dict:
+            livro = LivroCRUD.get_livro_by_id(item["livro_id"])
+            livro_cols = ["id", "titulo", "autor_id", "preco", "estoque", "editora_id", "ano_publicacao", "genero"]
+            livro_dict = transform_to_dict(livro, livro_cols)
+            
+            # Get the author name
+            autor = LivroCRUD.get_autor_by_id(livro_dict["autor_id"])
+            autor_cols = ["id", "nome", "nacionalidade"]
+            autor_dict = transform_to_dict(autor, autor_cols)
+            livro_dict["autor_nome"] = autor_dict["nome"]
+            
+            item["livro"] = livro_dict
+            
+        return itens_dict
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/relatorio", response_model=dict, tags=["Relatorio"])

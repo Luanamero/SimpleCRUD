@@ -310,4 +310,114 @@ export const OrdersGlobalStyles = createGlobalStyle`
   .lista-itens li {
     margin-bottom: 0.25rem;
   }
+
+  .lista-pedidos {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+
+  .card-pedido {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+  }
+
+  .cabecalho-pedido {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #eee;
+  }
+
+  .id-pedido {
+    font-weight: bold;
+    font-size: 1.2rem;
+    margin-right: 1rem;
+  }
+
+  .data-pedido {
+    color: #666;
+  }
+
+  .acoes-pedido {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .detalhes-pedido {
+    margin-bottom: 1.5rem;
+  }
+
+  .detalhes-pedido p {
+    margin: 0.5rem 0;
+  }
+
+  .itens-pedido h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.5rem;
+  }
+
+  .tabela-itens {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  .tabela-itens th, 
+  .tabela-itens td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+  }
+
+  .tabela-itens th {
+    font-weight: bold;
+    background-color: #f9f9f9;
+  }
+
+  .tabela-itens tfoot td {
+    border-bottom: none;
+    padding-top: 1rem;
+  }
+
+  .botao-editar {
+    background-color: #4a90e2;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .botao-excluir {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .botao-editar:hover {
+    background-color: #3a80d2;
+  }
+
+  .botao-excluir:hover {
+    background-color: #d73c2c;
+  }
+
+  .botao-editar:disabled,
+  .botao-excluir:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 `;

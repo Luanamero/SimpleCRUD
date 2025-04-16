@@ -13,10 +13,11 @@ import AutoresPage from './pages/AutoresPage/AutoresPage';
 import EditorasPage from './pages/EditorasPage/EditorasPage'; 
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './services/auth';
-
+import { GlobalStyle } from './style';
 const App = () => {
   return (
     <AuthProvider>
+      <GlobalStyle />
       <div>
         <Routes>
           {/* Public routes */}

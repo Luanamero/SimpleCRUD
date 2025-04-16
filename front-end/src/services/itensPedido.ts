@@ -47,8 +47,8 @@ export const useItensPedidoByPedidoId = (pedidoId: number) => {
   return useQuery({
     queryKey: ['itensPedido', { pedidoId }],
     queryFn: async () => {
-      const itens = await ItemPedidoService.listar();
-      return itens.filter(item => item.pedido_id === pedidoId);
+      const response = await api.get(`/itens-pedido/pedido/${pedidoId}`);
+      return response.data;
     },
     enabled: !!pedidoId,
   });

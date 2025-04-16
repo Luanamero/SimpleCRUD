@@ -769,5 +769,22 @@ class LivroCRUD:
             cur.close()
             conn.close()
 
+    @staticmethod
+    def get_itens_by_pedido_id(pedido_id):
+        """Retorna todos os itens relacionados a um pedido específico"""
+        conn = LivroCRUD.create_connection()
+        cur = conn.cursor()
+        try:
+            cur.execute("""
+                SELECT ip.* 
+                FROM itempedido ip 
+                WHERE ip.pedido_id = %s
+                ORDER BY ip.id;
+            """, (pedido_id,))
+            return cur.fetchall()
+        finally:
+            cur.close()
+            conn.close()
+
 
 

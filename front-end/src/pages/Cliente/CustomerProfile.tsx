@@ -1,19 +1,22 @@
-import { useState, useMemo, useEffect, JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal } from "react";
+import { orderBy } from "lodash";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useCliente } from "../../services/clientes";
-import { usePedidosByCliente } from "../../services/pedidos";
-import { useLivros } from "../../services/livros";
 import FiltroLivros from "../../components/FiltroLivros/FiltroLivros";
 import LivroItem from "../../components/LivroItem/LivroItem";
-import { CustomerProfileGlobalStyle } from "./styles";
 import { useAuth } from "../../services/auth";
-
+import { useCliente } from "../../services/clientes";
+import { useLivros } from "../../services/livros";
+import { usePedidosByCliente } from "../../services/pedidos";
+import { CustomerProfileGlobalStyle } from "./styles";
 
 const formatarDataExibicao = (dataString?: string) => {
   if (!dataString) return "N/A";
   try {
     const [year, month, day] = dataString.split("-").map(Number);
-    return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("pt-BR", { timeZone: "UTC" });
+    return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString(
+      "pt-BR",
+      { timeZone: "UTC" }
+    );
   } catch {
     return dataString;
   }
@@ -22,10 +25,9 @@ const formatarDataExibicao = (dataString?: string) => {
 const CustomerProfile = () => {
   const navigate = useNavigate();
   const { user, logout, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"profile" | "orders" | "livros" >("profile");
-  const [relatorio, setRelatorio] = useState<any>(null);
-  const [carregandoRelatorio, setCarregandoRelatorio] = useState(false);
-  const [erroRelatorio, setErroRelatorio] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"profile" | "orders" | "livros">(
+    "profile"
+  );
 
   const {
     data: customer,
@@ -58,31 +60,40 @@ const CustomerProfile = () => {
 
   const livrosFiltrados = useMemo(() => {
     return livros.filter((livro) => {
-      const nomeMatch = livro.titulo.toLowerCase().includes(filtro.nome.toLowerCase());
-      const generoMatch = (livro.genero || "").toLowerCase().includes(filtro.genero.toLowerCase());
-      const precoMatch = livro.preco >= filtro.precoMin && livro.preco <= filtro.precoMax;
+      const nomeMatch = livro.titulo
+        .toLowerCase()
+        .includes(filtro.nome.toLowerCase());
+      const generoMatch = (livro.genero || "")
+        .toLowerCase()
+        .includes(filtro.genero.toLowerCase());
+      const precoMatch =
+        livro.preco >= filtro.precoMin && livro.preco <= filtro.precoMax;
       const stockMatch = livro.estoque > 0;
 
       return nomeMatch && generoMatch && precoMatch && stockMatch;
     });
   }, [livros, filtro]);
 
-
-
   const handleLogout = async () => {
     await logout();
     navigate("/login");
   };
 
-  const isLoading = authLoading || customerLoading || ordersLoading || livrosLoading;
+  const isLoading =
+    authLoading || customerLoading || ordersLoading || livrosLoading;
   const isError = customerError || ordersError || livrosError;
-  const errorMessage = (customerQueryError as Error)?.message || 
-                      (ordersQueryError as Error)?.message || 
-                      (livrosQueryError as Error)?.message || 
-                      "Erro ao carregar dados.";
+  const errorMessage =
+    (customerQueryError as Error)?.message ||
+    (ordersQueryError as Error)?.message ||
+    (livrosQueryError as Error)?.message ||
+    "Erro ao carregar dados.";
 
   if (isLoading) {
-    return <div className="loading" style={{ textAlign: "center", padding: "2rem" }}>Carregando...</div>;
+    return (
+      <div className="loading" style={{ textAlign: "center", padding: "2rem" }}>
+        Carregando...
+      </div>
+    );
   }
 
   if (!user || !customer) {
@@ -90,14 +101,32 @@ const CustomerProfile = () => {
       navigate("/login");
       return null;
     }
-    return <div className="error" style={{ textAlign: "center", padding: "2rem", color: "red" }}>
-      Erro ao carregar perfil do cliente. Tente fazer login novamente.
-    </div>;
+    return (
+      <div
+        className="error"
+        style={{ textAlign: "center", padding: "2rem", color: "red" }}
+      >
+        Erro ao carregar perfil do cliente. Tente fazer login novamente.
+      </div>
+    );
   }
 
   if (isError) {
-    return <div className="error" style={{ textAlign: "center", padding: "2rem", color: "red" }}>{errorMessage}</div>;
+    return (
+      <div
+        className="error"
+        style={{ textAlign: "center", padding: "2rem", color: "red" }}
+      >
+        {errorMessage}
+      </div>
+    );
   }
+
+  const sortedOrders = orderBy(
+    orders,
+    (order) => order.data ?? order.id ?? new Date(),
+    "desc"
+  );
 
   return (
     <div className="customer-profile-container">
@@ -108,16 +137,24 @@ const CustomerProfile = () => {
       </header>
 
       <div className="profile-tabs">
-        <button className={activeTab === "profile" ? "active" : ""} onClick={() => setActiveTab("profile")}>
+        <button
+          className={activeTab === "profile" ? "active" : ""}
+          onClick={() => setActiveTab("profile")}
+        >
           Informações Pessoais
         </button>
-        <button className={activeTab === "orders" ? "active" : ""} onClick={() => setActiveTab("orders")}>
+        <button
+          className={activeTab === "orders" ? "active" : ""}
+          onClick={() => setActiveTab("orders")}
+        >
           Meus Pedidos ({orders.length})
         </button>
-        <button className={activeTab === "livros" ? "active" : ""} onClick={() => setActiveTab("livros")}>
+        <button
+          className={activeTab === "livros" ? "active" : ""}
+          onClick={() => setActiveTab("livros")}
+        >
           Explorar Livros
         </button>
-
       </div>
 
       <div className="profile-content">
@@ -149,7 +186,9 @@ const CustomerProfile = () => {
 
             <div className="actions">
               <button className="change-password">Alterar Senha</button>
-              <button className="logout" onClick={handleLogout}>Sair</button>
+              <button className="logout" onClick={handleLogout}>
+                Sair
+              </button>
             </div>
           </div>
         )}
@@ -159,25 +198,37 @@ const CustomerProfile = () => {
             {orders.length === 0 ? (
               <div className="no-orders">
                 <p>Você ainda não fez nenhum pedido.</p>
-                <button className="browse-books" onClick={() => setActiveTab("livros")}>
+                <button
+                  className="browse-books"
+                  onClick={() => setActiveTab("livros")}
+                >
                   Explorar Livros
                 </button>
               </div>
             ) : (
-              orders.map((order) => (
+              sortedOrders.map((order) => (
                 <div key={order.id} className="order-card">
                   <div className="order-header">
                     <div>
                       <span className="order-id">Pedido #{order.id}</span>
-                      <span className="order-date">{formatarDataExibicao(order.data)}</span>
+                      <span className="order-date">
+                        {formatarDataExibicao(order.data)}
+                      </span>
                     </div>
-                    <span className={`order-status status-${(order.status || "processando").toLowerCase().replace(" ", "-")}`}>
+                    <span
+                      className={`order-status status-${(
+                        order.status || "processando"
+                      )
+                        .toLowerCase()
+                        .replace(" ", "-")}`}
+                    >
                       {order.status || "Processando"}
                     </span>
                   </div>
                   <div className="order-footer">
                     <span className="order-total">
-                      Total: <span>
+                      Total:{" "}
+                      <span>
                         {order.total?.toLocaleString("pt-BR", {
                           style: "currency",
                           currency: "BRL",
@@ -199,11 +250,13 @@ const CustomerProfile = () => {
               genero={filtro.genero}
               precoMin={filtro.precoMin}
               precoMax={filtro.precoMax}
-              onChange={(novoFiltro) => setFiltro({
-                ...filtro,
-                ...novoFiltro,
-                estoqueBaixo: false,
-              })}
+              onChange={(novoFiltro) =>
+                setFiltro({
+                  ...filtro,
+                  ...novoFiltro,
+                  estoqueBaixo: false,
+                })
+              }
             />
 
             {livrosLoading ? (
